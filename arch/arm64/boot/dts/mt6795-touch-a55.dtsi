@@ -1,0 +1,336 @@
+/{
+	touch_fw_update {
+		compatible = "htc,touch_fwu";
+	};
+
+	bus {
+		I2C2@0x11009000 {
+			maxim@48 {
+				compatible = "maxim,max1187x_tsc";
+				reg = <0x48>;
+				gpio_tirq = <11>;
+				gpio_reset = <102>;
+				gpio_switch = <99>;
+				num_fw_mappings = <1>;
+				chip_id = <0x78>;
+				filename = "max11876a.bin";
+				filesize = <0xC000>;
+				file_codesize = <0xC000>;
+				defaults_allow = <1>;
+				default_config_id = <0x48C1>;
+				default_chip_id = <0x78>;
+				i2c_words = <123>;
+				coordinate_settings = <0x4>;
+				panel_min_x = <0>;
+				panel_max_x = <1440>;
+				panel_min_y = <0>;
+				panel_max_y = <2560>;
+				lcd_x = <1440>;
+				lcd_y = <2560>;
+				num_rows = <32>;
+				num_cols = <18>;
+				input_protocol = <1>;
+				button_code0 = <0>;
+				button_code1 = <0>;
+				button_code2 = <0>;
+				button_code3 = <0>;
+				update_feature = <2>;
+				tw_mask = <0xF>;
+				report_mode = <2>;
+				switch_invert;
+				hall_block_touch_time = <1000>;
+				disp_panel_check = <1>;
+
+				config5 {
+					config_id = <0x48C1>;
+					chip_id = <0x78>;
+					major_ver = <1>;
+					minor_ver = <31>;
+					protocol_ver = <8>;
+					support_glove = <1>;
+					support_cover = <1>;
+					filter_range = <0 40 100 100>;
+					disp_panel = "jdi";
+					vendor_pin = <0xC>;
+					config_touch = [
+						48C1 1220 007D 001E 0A02 090A FF07 0608
+						FF03 0502 01FF 0004 0B0F 0E10 0C11 12FF
+						FF0D 13FF 14FF 1A16 FF17 181C 191D 1E1B
+						151F 0100 0302 0504 0706 0908 0B0A 0D0C
+						0F0E 1110 FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 0A00 05A0 0513 0001 0502 051E 03B6
+						09A6 04E2 007D 0D00 0A06 FFFF FFFF FFFF
+						FFFF 03E8 FFFF FFFF FFFF FFFF FFFF FFFF
+						F52D
+					];
+					config_cal = [
+						FFF5 FFEA FFDF 0014 0014 0014 0014 0014
+						0014 0014 0014 0014 0014 0014 0014 0014
+						0014 0014 0014 0014 0014 0014 0014 0014
+						0014 0014 0014 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0000 0000 0000
+						0000 0000 0000 FFFF FF1E 010E 0113 0113
+						010E 00F0 010E 010E 00F0 00F0 000A 0001
+						0001 0002 0002 0003 0001 0001 0002 0002
+						0003 0A3B
+					];
+					config_private = [
+						01C2 00FA 002D 048B FB08 0028 001E 0190
+						02EE 00AA 0064 0018 04E2 0087 0000 B232
+						00FF 3200 FEFE FFFF 01FF FF15 4E21 0503
+						7896 52BC FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 1180
+					];
+					config_lin_x = [
+						0031 361E 664E 917E B1A1 D1C1 F1E1 A35E
+					];
+					config_lin_y = [
+						0035 3820 6850 9580 B5A5 D5C5 F5E5 B774
+					];
+				};
+
+				config4 {
+					config_id = <0x48D0>;
+					chip_id = <0x78>;
+					major_ver = <1>;
+					minor_ver = <31>;
+					protocol_ver = <8>;
+					support_glove = <1>;
+					support_cover = <1>;
+					filter_range = <0 40 100 100>;
+					disp_panel = "tianma";
+					vendor_pin = <0xD>;
+					config_touch = [
+						48D0 1220 007D 001E 0A02 090A FF07 0608
+						FF03 0502 01FF 0004 0B0F 0E10 0C11 12FF
+						FF0D 13FF 14FF 1A16 FF17 181C 191D 1E1B
+						151F 0100 0302 0504 0706 0908 0B0A 0D0C
+						0F0E 1110 FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 0A00 05A0 0513 0001 0502 0708 03E8
+						0A28 05DC 0096 0D00 0A05 FFFF FFFF FFFF
+						FFFF 03E8 FFFF FFFF FFFF FFFF FFFF FFFF
+						F8EC
+					];
+					config_cal = [
+						FFF5 FFEA FFDF 001C 001C 001C 001C 001C
+						001C 001C 001C 001C 001C 001C 001C 001C
+						001C 001C 001C 001C 001C 001C 001C 001C
+						001C 001C 001C 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0000 0000 0000
+						0000 0000 0000 FFFF FF1E 00FA 00FA 00FA
+						0104 00FA 010E 010E 00F0 00F0 000A 0001
+						0001 0002 0002 0003 0001 0001 0002 0002
+						0003 0AB5
+					];
+					config_private = [
+						01E0 00FA 002D 048B FB08 0028 001E 0190
+						02EE 00AA 0064 0018 04E2 0096 0000 B232
+						0100 3201 FEFE FFFF 00FF FF15 4E21 0503
+						7896 52BC FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 10AF
+					];
+					config_lin_x = [
+						0031 361E 664E 917E B1A1 D1C1 F1E1 A35E
+					];
+					config_lin_y = [
+						0035 3820 6850 9580 B5A5 D5C5 F5E5 B774
+					];
+				};
+
+				config3 {
+					config_id = <0x48F1>;
+					chip_id = <0x78>;
+					major_ver = <1>;
+					minor_ver = <31>;
+					protocol_ver = <8>;
+					support_glove = <1>;
+					support_cover = <1>;
+					filter_range = <0 40 100 100>;
+					disp_panel = "tianma";
+					vendor_pin = <0xF>;
+					config_touch = [
+						48F1 1220 007D 001E 0A02 090A FF07 0608
+						FF03 0502 01FF 0004 0B0F 0E10 0C11 12FF
+						FF0D 13FF 14FF 1A16 FF17 181C 191D 1E1B
+						151F 0100 0302 0504 0706 0908 0B0A 0D0C
+						0F0E 1110 FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 0A00 05A0 0513 0001 0502 051E 03B6
+						0A28 0546 0087 0D00 0A06 FFFF FFFF FFFF
+						FFFF 03E8 FFFF FFFF FFFF FFFF FFFF FFFF
+						F64D
+					];
+					config_cal = [
+						FFF5 FFEA FFDF 0014 0014 0014 0014 0014
+						0014 0014 0014 0014 0014 0014 0014 0014
+						0014 0014 0014 0014 0014 0014 0014 0014
+						0014 0014 0014 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0000 0000 0000
+						0000 0000 0000 FFFF FF1E 010E 010E 010E
+						010E 00E6 010E 010E 00F0 00F0 000A 0001
+						0001 0002 0002 0003 0001 0001 0002 0002
+						0003 0A27
+					];
+					config_private = [
+						01E0 00FA 002D 048B FB08 0028 001E 0190
+						02EE 00AA 0064 0018 04E2 0087 0000 B232
+						0000 3200 FEFE FFFF 01FF FF15 4E21 0503
+						7896 52BC FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 109F
+					];
+					config_lin_x = [
+						0031 361E 664E 917E B1A1 D1C1 F1E1 A35E
+					];
+					config_lin_y = [
+						0035 3820 6850 9580 B5A5 D5C5 F5E5 B774
+					];
+				};
+
+				config2 {
+					config_id = <0x48D5>;
+					chip_id = <0x78>;
+					major_ver = <1>;
+					minor_ver = <31>;
+					protocol_ver = <8>;
+					support_glove = <1>;
+					support_cover = <1>;
+					filter_range = <0 40 100 100>;
+					disp_panel = "sharp";
+					vendor_pin = <0xD>;
+					config_touch = [
+						48D5 1220 007D 001E 0A02 090A FF07 0608
+						FF03 0502 01FF 0004 0B0F 0E10 0C11 12FF
+						FF0D 13FF 14FF 1A16 FF17 181C 191D 1E1B
+						151F 0100 0302 0504 0706 0908 0B0A 0D0C
+						0F0E 1110 FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 0A00 05A0 0513 0001 0502 0834 03E8
+						0A28 05DC 0096 0D00 0A05 FFFF FFFF FFFF
+						FFFF 03E8 FFFF FFFF FFFF FFFF FFFF FFFF
+						FA1D
+					];
+					config_cal = [
+						FFF5 FFEA FFDF 0018 0018 0018 0018 0018
+						0018 0018 0018 0018 0018 0018 0018 0018
+						0018 0018 0018 0018 0018 0018 0018 0018
+						0018 0018 0018 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0000 0000 0000
+						0000 0000 0000 FFFF FF1E 00FA 010E 010E
+						0104 00F0 010E 010E 00F0 00F0 000A 0001
+						0001 0002 0002 0003 0001 0001 0002 0002
+						0003 0A73
+					];
+					config_private = [
+						01E0 00FA 002D 048B FB08 0028 001E 0190
+						02EE 00AA 0064 0018 04E2 0096 0000 B232
+						0000 3201 FEFE FFFF 00FF FF15 4E21 0503
+						7896 52BC FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 0FAF
+					];
+					config_lin_x = [
+						0031 361E 664E 917E B1A1 D1C1 F1E1 A35E
+					];
+					config_lin_y = [
+						0035 3820 6850 9580 B5A5 D5C5 F5E5 B774
+					];
+				};
+
+				config1 {
+					config_id = <0x48F5>;
+					chip_id = <0x78>;
+					major_ver = <1>;
+					minor_ver = <31>;
+					protocol_ver = <8>;
+					support_glove = <1>;
+					support_cover = <1>;
+					filter_range = <0 40 100 100>;
+					disp_panel = "sharp";
+					vendor_pin = <0xF>;
+					config_touch = [
+						48F5 1220 007D 001E 0A02 090A FF07 0608
+						FF03 0502 01FF 0004 0B0F 0E10 0C11 12FF
+						FF0D 13FF 14FF 1A16 FF17 181C 191D 1E1B
+						151F 0100 0302 0504 0706 0908 0B0A 0D0C
+						0F0E 1110 FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 0A00 05A0 0513 0001 0502 0834 03E8
+						0A28 05DC 0096 0D00 0A05 FFFF FFFF FFFF
+						FFFF 03E8 FFFF FFFF FFFF FFFF FFFF FFFF
+						FA3D
+					];
+					config_cal = [
+						FFF5 FFEA FFDF 0018 0018 0018 0018 0018
+						0018 0018 0018 0018 0018 0018 0018 0018
+						0018 0018 0018 0018 0018 0018 0018 0018
+						0018 0018 0018 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0000 0000 0000
+						0000 0000 0000 FFFF FF1E 00FA 010E 010E
+						010E 00E6 010E 010E 00F0 00F0 000A 0001
+						0001 0002 0002 0003 0001 0001 0002 0002
+						0003 0A73
+					];
+					config_private = [
+						01E0 00FA 002D 048B FB08 0028 001E 0190
+						02EE 00AA 0064 0018 04E2 0096 0000 B232
+						00FF 3200 FEFE FFFF 00FF FF15 4E21 0503
+						7896 52BC FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 10AD
+					];
+					config_lin_x = [
+						0031 361E 664E 917E B1A1 D1C1 F1E1 A35E
+					];
+					config_lin_y = [
+						0035 3820 6850 9580 B5A5 D5C5 F5E5 B774
+					];
+				};
+
+				config0 {
+					config_id = <0x6701>;
+					chip_id = <0x78>;
+					major_ver = <1>;
+					minor_ver = <30>;
+					protocol_ver = <8>;
+					eng_id = <1>;
+					config_touch = [
+						6701 111E 0078 001E 0A01 09FF FF07 0608
+						FF03 0502 01FF 0004 0A0E 0D0F 0B10 11FF
+						FF0C 12FF 13FF 1814 FF15 161A 171B 1C19
+						FF1D 0100 0302 0504 0706 0908 0B0A 0D0C
+						0F0E FF10 FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF 0A00 05A0 0113 0001 1902 073A 0960
+						0578 04B0 0082 1900 0A08 FFFF FFFF FFFF
+						FFFF 03E8 FFFF FFFF FFFF FFFF FFFF FFFF
+						FCB7
+					];
+					config_cal = [
+						FFF5 FFEA FFDF 001C 001C 001C 001C 001C
+						001C 001C 001C 001C 001C 001C 001C 001C
+						001C 001C 001C 001C 001C 001C 001C 001C
+						001C 001C 001C 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0003 0003 0003 0003
+						0003 0003 0003 0003 0000 0000 0000 0000
+						0000 0000 0000 FFFF FF1E 00E6 00FF 00FF
+						00FF 00FF 00FF 00FF 00FF 00FF 000A 0001
+						0001 0002 0002 0003 0001 0001 0002 0002
+						0003 0AA8
+					];
+					config_private = [
+						0118 0069 0064 0038 F0FF 1428 001E 0190
+						03B6 00AA 0064 0018 04E2 003C 1400 B232
+						FEFF FFFD FEFE FFFF 00FF FF15 4E21 0DC3
+						7864 524C FFFF FFFF FFFF FFFF FFFF FFFF
+						FFFF FDB8
+					];
+					config_lin_x = [
+						002B 3016 644C 8876 AA99 CBBB F0E0 8437
+					];
+					config_lin_y = [
+						0030 2E17 664B 8F7D AE9F CABC EADA 8844
+					];
+				};
+			};
+		};
+	};
+};

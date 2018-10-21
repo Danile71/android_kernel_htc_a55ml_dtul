@@ -1,0 +1,121 @@
+/*
+ * Mediatek's MT6795 SoC device tree source
+ *
+ * Copyright (c) 2013 MediaTek Co., Ltd.
+ *              http://www.mediatek.com
+ *
+ */
+
+/dts-v1/;
+
+/include/ "mt6795.dtsi"
+/include/ "cust_eint.dtsi"
+/include/ "htc_features.dtsi"
+/include/ "mt6795-touch-a55.dtsi"
+
+/ {
+	htc_board_info {
+		htc_pid,htc_sku1 = <0x0 0x3>;
+	};
+
+	memory@00000000 {
+		device_type = "memory";
+		reg = <0 0x40000000 0 0x1E800000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		
+		reserve-memory-ccci_md1 {
+			compatible = "reserve-memory-ccci_md1";
+			no-map;
+			size = <0 0x8200000>;
+			alignment = <0 0x2000000>;
+			alloc-ranges = <0 0x40000000 0 0xC0000000>;
+		};
+	};
+
+	htc_receiver{
+		htc_aud,select-gpio = <63>;
+	};
+
+	bus {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0 0 0xffffffff>;
+
+		I2C3@0x11010000 {
+			nxp_pn544_nfc@2b {
+				compatible = "nxp,pn544-nfc";
+				reg = <0x2b>;
+				nxp,irq-gpio = <115>;
+				nxp,ven-gpio = <135>;
+				nxp,fwdl-gpio = <89>;
+				nxp,pvdd-gpio = <53>;
+				nxp,ven_isinvert = <0>;
+				nxp,isalive = <1>;
+			};
+			htc_mcu@72{
+				compatible = "htc_mcu";
+				reg = <0x72>;
+				mcu,intr-gpio  = <52>;
+				mcu,gs_chip_layout = <1>;
+				mcu,acceleration_axes = <7>;
+				mcu,magnetic_axes = <7>;
+				mcu,gyro_axes = <7>;
+				mcu,Cpu_wake_mcu-gpio = <130>;
+				mcu,Reset-gpio = <131>;
+				mcu,Chip_mode-gpio = <94>;
+				mcu,mcu_status-gpio = <91>;
+				mcu,als_levels = <9 32 56 256 582 3964 5491 9609 13546 65535>;
+				mcu,als_goldl = <0xB9>;
+				mcu,als_goldh = <0x0D>;
+				mcu,ps_thd_add = <0x32>;
+				mcu,ps_thd_fixed = <0x15>;
+				touch_enable = <1>;
+				vibrate_ms = <60>;
+			};
+			htc_mcu_flash@39 {
+				compatible = "htc_mcu_flash";
+				reg = <0x39>;
+			};
+			htc_mcu_dload@02 {
+				compatible = "htc_mcu_dload";
+				reg = <0x02>;
+			};
+
+			sy7802@53 {
+				compatible = "SY7802_FLASHLIGHT";
+				reg = <0x53>;
+//				sy7802,sy7802_strb0 = <6>;
+//				sy7802,sy7802_strb1 = <7>;
+//				sy7802,flash_duration_ms = <600>;
+//				sy7802,enable_FLT_1500mA = <0>;
+			};
+		};
+
+		I2C4@0x11011000 {
+			nxp_tfa9895_amp@35 {
+				compatible = "nxp,tfa9895-amp";
+				reg = <0x35>;
+			};
+		};
+
+		I2C4@0x11011000 {
+			nxp_tfa9895l_amp@34 {
+				compatible = "nxp,tfa9895l-amp";
+				reg = <0x34>;
+			};
+		};
+	};
+
+	hall_ak8789 {
+		compatible = "hall_sensor,ak8789";
+		hall,att_used = <2>;
+		hall,att_gpio = <8>;
+		hall,att_gpio_s = <9>;
+	};
+};
