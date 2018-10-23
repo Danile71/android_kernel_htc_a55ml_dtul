@@ -1,4 +1,4 @@
- /*!
+/*************************************************************************/ /*!
 @File
 @Title          PVR Bridge Module (kernel side)
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
@@ -40,7 +40,7 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ 
+*/ /**************************************************************************/
 #include "img_defs.h"
 #include "pvr_bridge.h"
 #include "connection_server.h"
@@ -57,8 +57,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #if defined(PVR_DRM_SECURE_AUTH_EXPORT)
 #include "env_connection.h"
 #endif
-#endif 
+#endif /* defined(SUPPORT_DRM) */
 
+/* RGX: */
 #if defined(SUPPORT_RGX)
 #include "rgx_bridge.h"
 #endif
@@ -68,8 +69,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "cache_defines.h"
 
 #if defined(MODULE_TEST)
+/************************************************************************/
+// additional includes for services testing
+/************************************************************************/
 #include "pvr_test_bridge.h"
 #include "kern_test.h"
+/************************************************************************/
+// end of additional includes
+/************************************************************************/
 #endif
 
 
@@ -80,7 +87,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #if defined(DEBUG_BRIDGE_KM)
-static void *gpvPVRDebugFSBridgeStatsEntry = NULL;
+static PVR_DEBUGFS_ENTRY_DATA *gpsPVRDebugFSBridgeStatsEntry = NULL;
 static struct seq_operations gsBridgeStatsReadOps;
 #endif
 
@@ -111,10 +118,10 @@ PVRSRV_ERROR RegisterRGXPDUMPFunctions(void);
 PVRSRV_ERROR RegisterRGXHWPERFFunctions(void);
 #if defined(RGX_FEATURE_RAY_TRACING)
 PVRSRV_ERROR RegisterRGXRAYFunctions(void);
-#endif 
+#endif /* RGX_FEATURE_RAY_TRACING */
 PVRSRV_ERROR RegisterREGCONFIGFunctions(void);
 PVRSRV_ERROR RegisterTIMERQUERYFunctions(void);
-#endif 
+#endif /* SUPPORT_RGX */
 #if (CACHEFLUSH_TYPE == CACHEFLUSH_GENERIC)
 PVRSRV_ERROR RegisterCACHEGENERICFunctions(void);
 #endif
@@ -132,6 +139,7 @@ PVRSRV_ERROR RegisterRIFunctions(void);
 PVRSRV_ERROR RegisterDMABUFFunctions(void);
 #endif
 
+/* These and their friends above will go when full bridge gen comes in */
 PVRSRV_ERROR
 LinuxBridgeInit(void);
 void
@@ -149,7 +157,7 @@ LinuxBridgeInit(void)
 					&gsBridgeStatsReadOps,
 					NULL,
 					&g_BridgeDispatchTable[0],
-					&gpvPVRDebugFSBridgeStatsEntry);
+                    &gpsPVRDebugFSBridgeStatsEntry);
 	if (iResult != 0)
 	{
 		return PVRSRV_ERROR_OUT_OF_MEMORY;
@@ -318,7 +326,7 @@ LinuxBridgeInit(void)
 	{
 		return eError;
 	}
-#endif 
+#endif /* RGX_FEATURE_RAY_TRACING */
 
 	eError = RegisterREGCONFIGFunctions();
 	if (eError != PVRSRV_OK)
@@ -332,7 +340,7 @@ LinuxBridgeInit(void)
 		return eError;
 	}
 
-#endif 
+#endif /* SUPPORT_RGX */
 
 	return eError;
 }
@@ -341,8 +349,8 @@ void
 LinuxBridgeDeInit(void)
 {
 #if defined(DEBUG_BRIDGE_KM)
-	PVRDebugFSRemoveEntry(gpvPVRDebugFSBridgeStatsEntry);
-	gpvPVRDebugFSBridgeStatsEntry = NULL;
+    PVRDebugFSRemoveEntry(gpsPVRDebugFSBridgeStatsEntry);
+    gpsPVRDebugFSBridgeStatsEntry = NULL;
 #endif
 }
 
@@ -351,7 +359,7 @@ static void *BridgeStatsSeqStart(struct seq_file *psSeqFile, loff_t *puiPosition
 {
 	PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY *psDispatchTable = (PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY *)psSeqFile->private;
 
-	mutex_lock(&gPVRSRVLock);
+	OSAcquireBridgeLock();
 
 	if (psDispatchTable == NULL || (*puiPosition) > BRIDGE_DISPATCH_TABLE_ENTRY_COUNT)
 	{
@@ -371,7 +379,7 @@ static void BridgeStatsSeqStop(struct seq_file *psSeqFile, void *pvData)
 	PVR_UNREFERENCED_PARAMETER(psSeqFile);
 	PVR_UNREFERENCED_PARAMETER(pvData);
 
-	mutex_unlock(&gPVRSRVLock);
+	OSReleaseBridgeLock();
 }
 
 static void *BridgeStatsSeqNext(struct seq_file *psSeqFile,
@@ -435,7 +443,7 @@ static struct seq_operations gsBridgeStatsReadOps =
 	.next = BridgeStatsSeqNext,
 	.show = BridgeStatsSeqShow,
 };
-#endif 
+#endif /* defined(DEBUG_BRIDGE_KM) */
 
 
 #if defined(SUPPORT_DRM)
@@ -443,7 +451,7 @@ int
 PVRSRV_BridgeDispatchKM(struct drm_device *dev, void *arg, struct drm_file *pFile)
 #else
 long
-PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsigned long arg)
+PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int ioctlCmd, unsigned long arg)
 #endif
 {
 #if !defined(SUPPORT_DRM)
@@ -454,7 +462,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 	CONNECTION_DATA *psConnection = LinuxConnectionFromFile(pFile);
 	IMG_INT err = -EFAULT;
 
-	mutex_lock(&gPVRSRVLock);
+	OSAcquireBridgeLock();
 
 #if defined(SUPPORT_DRM)
 	PVR_UNREFERENCED_PARAMETER(dev);
@@ -462,8 +470,6 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 	psBridgePackageKM = (PVRSRV_BRIDGE_PACKAGE *)arg;
 	PVR_ASSERT(psBridgePackageKM != IMG_NULL);
 #else
-	PVR_UNREFERENCED_PARAMETER(ioctlCmd);
-
 	psBridgePackageKM = &sBridgePackageKM;
 
 	if(!OSAccessOK(PVR_VERIFY_WRITE,
@@ -483,6 +489,15 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 					  sizeof(PVRSRV_BRIDGE_PACKAGE))
 	  != PVRSRV_OK)
 	{
+		goto unlock_and_return;
+	}
+
+	if (ioctlCmd != psBridgePackageKM->ui32BridgeID ||
+	    psBridgePackageKM->ui32Size != sizeof(PVRSRV_BRIDGE_PACKAGE))
+	{
+		PVR_DPF((PVR_DBG_ERROR, "%s: Inconsistent data passed from user space",
+				__FUNCTION__));
+		err = PVRSRV_ERROR_INVALID_PARAMS;
 		goto unlock_and_return;
 	}
 #endif
@@ -505,7 +520,7 @@ PVRSRV_BridgeDispatchKM(struct file *pFile, unsigned int unref__ ioctlCmd, unsig
 #if !defined(SUPPORT_DRM)
 unlock_and_return:
 #endif
-	mutex_unlock(&gPVRSRVLock);
+	OSReleaseBridgeLock();
 	return err;
 }
 
@@ -517,17 +532,17 @@ int
 long
 #endif
 PVRSRV_BridgeCompatDispatchKM(struct file *pFile,
-			      unsigned int unref__ ioctlCmd,
+			      unsigned int ioctlCmd,
 			      unsigned long arg)
 {
 	struct bridge_package_from_32
 	{
-		IMG_UINT32				bridge_id;			
-		IMG_UINT32				size;				
-		IMG_UINT32				addr_param_in;		 
-		IMG_UINT32				in_buffer_size;		
-		IMG_UINT32				addr_param_out;		
-		IMG_UINT32				out_buffer_size;	
+		IMG_UINT32				bridge_id;			/*!< ioctl/drvesc index */
+		IMG_UINT32				size;				/*!< size of structure */
+		IMG_UINT32				addr_param_in;		/*!< input data buffer */ 
+		IMG_UINT32				in_buffer_size;		/*!< size of input data buffer */
+		IMG_UINT32				addr_param_out;		/*!< output data buffer */
+		IMG_UINT32				out_buffer_size;	/*!< size of output data buffer */
 	};
 
 	IMG_INT err = -EFAULT;
@@ -540,10 +555,10 @@ PVRSRV_BridgeCompatDispatchKM(struct file *pFile,
 	struct drm_file *file_priv = pFile->private_data;
 	CONNECTION_DATA *psConnection = LinuxConnectionFromFile(file_priv);
 #endif
-	
+	// make sure there is no padding inserted by compiler
 	PVR_ASSERT(sizeof(struct bridge_package_from_32) == 6 * sizeof(IMG_UINT32));
 
-	mutex_lock(&gPVRSRVLock);
+	OSAcquireBridgeLock();
 
 	if(!OSAccessOK(PVR_VERIFY_READ, (void *) arg,
 				   sizeof(struct bridge_package_from_32)))
@@ -561,9 +576,16 @@ PVRSRV_BridgeCompatDispatchKM(struct file *pFile,
 		goto unlock_and_return;
 	}
 
-	PVR_ASSERT(params_addr->size == sizeof(struct bridge_package_from_32));
-
 	params_addr->bridge_id = PVRSRV_GET_BRIDGE_ID(params_addr->bridge_id);
+
+	if (PVRSRV_GET_BRIDGE_ID(ioctlCmd) != params_addr->bridge_id ||
+	    params_addr->size != sizeof(struct bridge_package_from_32))
+	{
+		PVR_DPF((PVR_DBG_ERROR, "%s: Inconsistent data passed from user space",
+				__FUNCTION__));
+		err = PVRSRV_ERROR_INVALID_PARAMS;
+		goto unlock_and_return;
+	}
 
 #if defined(DEBUG_BRIDGE_KM)
 	PVR_DPF((PVR_DBG_MESSAGE, "ioctl %s -> func %s",
@@ -581,7 +603,7 @@ PVRSRV_BridgeCompatDispatchKM(struct file *pFile,
 	err = BridgedDispatchKM(psConnection, &params_for_64);
 	
 unlock_and_return:
-	mutex_unlock(&gPVRSRVLock);
+	OSReleaseBridgeLock();
 	return err;
 }
-#endif 
+#endif /* defined(CONFIG_COMPAT) */

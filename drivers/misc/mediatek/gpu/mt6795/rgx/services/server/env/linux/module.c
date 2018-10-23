@@ -1,4 +1,4 @@
- /*!
+/*************************************************************************/ /*!
 @File
 @Title          Linux module setup
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
@@ -38,7 +38,7 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ 
+*/ /**************************************************************************/
 
 #include <linux/version.h>
 
@@ -138,15 +138,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 static const struct of_device_id mtk_dt_ids[] = {
 	{ .compatible = "mediatek,HAN" },
-	{  }
+	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, mtk_dt_ids);
 #endif
 
+/* MTK: fixme */
 #ifndef MODULE
 #define MODULE
 #endif
 
+/*
+ * DRVNAME is the name we use to register our driver.
+ * DEVNAME is the name we use to register actual device nodes.
+ */
 #define	DRVNAME		PVR_LDM_DRIVER_REGISTRATION_NAME
 #define DEVNAME		PVRSRV_MODNAME
 
@@ -156,6 +161,9 @@ MODULE_DEVICE_TABLE(of, mtk_dt_ids);
 #define PRIVATE_DATA(pFile) ((pFile)->private_data)
 #endif
 
+/*
+ * This is all module configuration stuff required by the linux kernel.
+ */
 MODULE_SUPPORTED_DEVICE(DEVNAME);
 
 #if defined(PVRSRV_NEED_PVR_DPF)
@@ -163,8 +171,12 @@ MODULE_SUPPORTED_DEVICE(DEVNAME);
 extern IMG_UINT32 gPVRDebugLevel;
 module_param(gPVRDebugLevel, uint, 0644);
 MODULE_PARM_DESC(gPVRDebugLevel, "Sets the level of debug output (default 0x7)");
-#endif 
+#endif /* defined(PVRSRV_NEED_PVR_DPF) */
 
+/*
+ * Newer kernels no longer support __devinitdata, __devinit, __devexit, or
+ * __devexit_p.
+ */
 #if !defined(__devinitdata)
 #define __devinitdata
 #endif
@@ -179,6 +191,7 @@ MODULE_PARM_DESC(gPVRDebugLevel, "Sets the level of debug output (default 0x7)")
 #endif
 
 #if defined(SUPPORT_DISPLAY_CLASS)
+/* Display class interface */
 EXPORT_SYMBOL(DCRegisterDevice);
 EXPORT_SYMBOL(DCUnregisterDevice);
 EXPORT_SYMBOL(DCDisplayConfigurationRetired);
@@ -186,6 +199,7 @@ EXPORT_SYMBOL(DCImportBufferAcquire);
 EXPORT_SYMBOL(DCImportBufferRelease);
 #endif
 
+/* Physmem interface (required by LMA DC drivers) */
 EXPORT_SYMBOL(PhysHeapAcquire);
 EXPORT_SYMBOL(PhysHeapRelease);
 EXPORT_SYMBOL(PhysHeapGetType);
@@ -193,6 +207,7 @@ EXPORT_SYMBOL(PhysHeapGetAddress);
 EXPORT_SYMBOL(PhysHeapGetSize);
 EXPORT_SYMBOL(PhysHeapCpuPAddrToDevPAddr);
 
+/* System interface (required by DC drivers) */
 #if defined(SUPPORT_SYSTEM_INTERRUPT_HANDLING) && !defined(SUPPORT_DRM)
 EXPORT_SYMBOL(SysInstallDeviceLISR);
 EXPORT_SYMBOL(SysUninstallDeviceLISR);
@@ -216,10 +231,23 @@ EXPORT_SYMBOL(RGXInitSLC);
 #endif
 
 #if !defined(SUPPORT_DRM)
+/*
+ * Device class used for /sys entries (and udev device node creation)
+ */
 static struct class *psPvrClass;
 
+/*
+ * This is the major number we use for all nodes in /dev.
+ */
 static int AssignedMajorNumber;
 
+/*
+ * These are the operations that will be associated with the device node
+ * we create.
+ *
+ * With gcc -W, specifying only the non-null members produces "missing
+ * initializer" warnings.
+*/
 static int PVRSRVOpen(struct inode* pInode, struct file* pFile);
 static int PVRSRVRelease(struct inode* pInode, struct file* pFile);
 
@@ -234,7 +262,7 @@ static struct file_operations pvrsrv_fops =
 	.release	= PVRSRVRelease,
 	.mmap		= MMapPMR,
 };
-#endif	
+#endif	/* !defined(SUPPORT_DRM) */
 
 struct mutex gPVRSRVLock;
 
@@ -246,13 +274,13 @@ static LIST_HEAD(sDRMAuthListHead);
 #define	LDM_DEV	struct platform_device
 #define	LDM_DRV	struct platform_driver
 #define TO_LDM_DEV(d) to_platform_device(d)
-#endif 
+#endif /*LDM_PLATFORM */
 
 #if defined(LDM_PCI)
 #define	LDM_DEV	struct pci_dev
 #define	LDM_DRV	struct pci_driver
 #define TO_LDM_DEV(d) to_pci_device(d)
-#endif 
+#endif /* LDM_PCI */
 
 #if defined(LDM_PLATFORM)
 static int PVRSRVDriverRemove(LDM_DEV *device);
@@ -269,6 +297,7 @@ static int PVRSRVDriverSuspend(struct device *device);
 static int PVRSRVDriverResume(struct device *device);
 
 #if defined(LDM_PCI)
+/* This structure is used by the Linux module code */
 struct pci_device_id powervr_id_table[] __devinitdata = {
 	{PCI_DEVICE(SYS_RGX_DEV_VENDOR_ID, SYS_RGX_DEV_DEVICE_ID)},
 #if defined (SYS_RGX_DEV1_DEVICE_ID)
@@ -277,7 +306,7 @@ struct pci_device_id powervr_id_table[] __devinitdata = {
 	{0}
 };
 MODULE_DEVICE_TABLE(pci, powervr_id_table);
-#endif	 
+#endif	/*defined(LDM_PCI) */ 
 
 #if defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
 static struct platform_device_id powervr_id_table[] __devinitdata = {
@@ -342,13 +371,27 @@ static struct platform_device_info powervr_device_info =
 	.id			= -1,
 	.dma_mask		= DMA_BIT_MASK(32),
 };
-#endif	
-#endif	
-#endif	
+#endif	/* (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)) */
+#endif	/* defined(MODULE) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV) */
+#endif	/* defined(LDM_PLATFORM) */
 
 static IMG_BOOL bCalledSysInit = IMG_FALSE;
 static IMG_BOOL	bDriverProbeSucceeded = IMG_FALSE;
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVSystemInit
+
+ @Description
+
+ Wrapper for PVRSRVInit.
+
+ @input pDevice - the device for which a probe is requested
+
+ @Return 0 for success or <0 for an error.
+
+*****************************************************************************/
 #if defined(SUPPORT_DRM)
 int PVRSRVSystemInit(struct drm_device *pDevice)
 #else
@@ -357,8 +400,9 @@ static int PVRSRVSystemInit(LDM_DEV *pDevice)
 {
 	PVR_TRACE(("PVRSRVSystemInit (pDevice=%p)", pDevice));
 
+//	ssleep(30);
 
-	
+	/* PVRSRVInit is only designed to be called once */
 	if (bCalledSysInit == IMG_FALSE)
 	{
 #if defined(SUPPORT_DRM)
@@ -371,7 +415,7 @@ static int PVRSRVSystemInit(LDM_DEV *pDevice)
 #error Only platform and pci devices are supported
 #endif
 
-#else 
+#else /* SUPPORT_DRM */
 		gpsPVRLDMDev = pDevice;
 #endif
 
@@ -386,6 +430,19 @@ static int PVRSRVSystemInit(LDM_DEV *pDevice)
 	return 0;
 }
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVSystemDeInit
+
+ @Description
+
+ Wrapper for PVRSRVDeInit.
+
+ @input none
+ @Return nothing.
+
+*****************************************************************************/
 PVR_MOD_STATIC void PVRSRVSystemDeInit(void)
 {
 	PVR_TRACE(("PVRSRVSystemDeInit"));
@@ -397,6 +454,20 @@ PVR_MOD_STATIC void PVRSRVSystemDeInit(void)
 #endif
 }
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVDriverProbe
+
+ @Description
+
+ See whether a given device is really one we can drive.
+
+ @input pDevice - the device for which a probe is requested
+
+ @Return 0 for success or <0 for an error.
+
+*****************************************************************************/
 #if defined(LDM_PLATFORM)
 static int PVRSRVDriverProbe(LDM_DEV *pDevice)
 #endif
@@ -415,14 +486,29 @@ static int __devinit PVRSRVDriverProbe(LDM_DEV *pDevice, const struct pci_device
 #if defined(LDM_PCI)
 	result = drm_get_pci_dev(pDevice, pID, &sPVRDRMDriver);
 #endif
-#else	
+#else	/* defined(SUPPORT_DRM) */
 	result = PVRSRVSystemInit(pDevice);
-#endif	
+#endif	/* defined(SUPPORT_DRM) */
 	bDriverProbeSucceeded = (result == 0);
 	return result;
 }
 
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVDriverRemove
+
+ @Description
+
+ This call is the opposite of the probe call; it is called when the device is
+ being removed from the driver's control.
+
+ @input pDevice - the device for which driver detachment is happening
+
+ @Return 0, or no return value at all, depending on the device type.
+
+*****************************************************************************/
 #if defined (LDM_PLATFORM)
 static int PVRSRVDriverRemove(LDM_DEV *pDevice)
 #endif
@@ -439,13 +525,13 @@ static void __devexit PVRSRVDriverRemove(LDM_DEV *pDevice)
 #else
 	drm_put_dev(platform_get_drvdata(pDevice));
 #endif
-#endif	
+#endif	/* defined(LDM_PLATFORM) */
 #if defined(LDM_PCI)
 	drm_put_dev(pci_get_drvdata(pDevice));
 #endif
-#else	
+#else	/* defined(SUPPORT_DRM) */
 	PVRSRVSystemDeInit();
-#endif	
+#endif	/* defined(SUPPORT_DRM) */
 #if defined(LDM_PLATFORM)
 	return 0;
 #endif
@@ -472,10 +558,26 @@ static struct early_suspend PVRSRVEarlySuspendHandler =
     .suspend =  PVRSRVEarlySuspend,
     .resume =   PVRSRVLateResume,
 };
-#endif 
+#endif /* CONFIG_HAS_EARLYSUSPEND */
 
 
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVDriverShutdown
+
+ @Description
+
+ Suspend device operation for system shutdown.  This is called as part of the
+ system halt/reboot process.  The driver is put into a quiescent state by 
+ setting the power state to D3.
+
+ @input pDevice - the device for which shutdown is requested
+
+ @Return nothing
+
+*****************************************************************************/
 static void PVRSRVDriverShutdown(LDM_DEV *pDevice)
 {
 	PVR_TRACE(("PVRSRVDriverShutdown (pDevice=%p)", pDevice));
@@ -484,17 +586,36 @@ static void PVRSRVDriverShutdown(LDM_DEV *pDevice)
 
 	if (!bDriverIsShutdown && !bDriverIsSuspended)
 	{
-		mutex_lock(&gPVRSRVLock);
+		/*
+		 * Take the bridge mutex, and never release it, to stop
+		 * processes trying to use the driver after it has been
+		 * shutdown.
+		 */
+		OSAcquireBridgeLock();
 
 		(void) PVRSRVSetPowerStateKM(PVRSRV_SYS_POWER_STATE_OFF, IMG_TRUE);
 	}
 
 	bDriverIsShutdown = IMG_TRUE;
 
-	
+	/* The bridge mutex is held on exit */
 	mutex_unlock(&gsPMMutex);
 }
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVDriverSuspend
+
+ @Description
+
+ Suspend device operation.
+
+ @input pDevice - the device for which resume is requested
+
+ @Return 0 for success or <0 for an error.
+
+*****************************************************************************/
 static int PVRSRVDriverSuspend(struct device *pDevice)
 {
 	int res = 0;
@@ -505,16 +626,16 @@ static int PVRSRVDriverSuspend(struct device *pDevice)
 
 	if (!bDriverIsSuspended && !bDriverIsShutdown)
 	{
-		mutex_lock(&gPVRSRVLock);
+		OSAcquireBridgeLock();
 
 		if (PVRSRVSetPowerStateKM(PVRSRV_SYS_POWER_STATE_OFF, IMG_TRUE) == PVRSRV_OK)
 		{
-			
+			/* The bridge mutex will be held until we resume */
 			bDriverIsSuspended = IMG_TRUE;
 		}
 		else
 		{
-			mutex_unlock(&gPVRSRVLock);
+			OSReleaseBridgeLock();
 			res = -EINVAL;
 		}
 	}
@@ -525,6 +646,20 @@ static int PVRSRVDriverSuspend(struct device *pDevice)
 }
 
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVDriverResume
+
+ @Description
+
+ Resume device operation.
+
+ @input pDevice - the device for which resume is requested
+
+ @Return 0 for success or <0 for an error.
+
+*****************************************************************************/
 static int PVRSRVDriverResume(struct device *pDevice)
 {
 	int res = 0;
@@ -538,11 +673,11 @@ static int PVRSRVDriverResume(struct device *pDevice)
 		if (PVRSRVSetPowerStateKM(PVRSRV_SYS_POWER_STATE_ON, IMG_TRUE) == PVRSRV_OK)
 		{
 			bDriverIsSuspended = IMG_FALSE;
-			mutex_unlock(&gPVRSRVLock);
+			OSReleaseBridgeLock();
 		}
 		else
 		{
-			
+			/* The bridge mutex is not released on failure */
 			res = -EINVAL;
 		}
 	}
@@ -552,6 +687,23 @@ static int PVRSRVDriverResume(struct device *pDevice)
 	return res;
 }
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVOpen
+
+ @Description
+
+ Open the PVR services node.
+
+ @input pInode - the inode for the file being openeded.
+ @input dev    - the DRM device corresponding to this driver.
+
+ @input pFile - the file handle data for the actual file being opened
+
+ @Return 0 for success or <0 for an error.
+
+*****************************************************************************/
 #if defined(SUPPORT_DRM)
 int PVRSRVOpen(struct drm_device unref__ *dev, struct drm_file *pFile)
 #else
@@ -568,7 +720,7 @@ static int PVRSRVOpen(struct inode unref__ * pInode, struct file *pFile)
 		return iRet;
 	}
 
-	mutex_lock(&gPVRSRVLock);
+	OSAcquireBridgeLock();
 
 	psPrivateData = OSAllocMem(sizeof(PVRSRV_FILE_PRIVATE_DATA));
 
@@ -579,6 +731,11 @@ static int PVRSRVOpen(struct inode unref__ * pInode, struct file *pFile)
 	psPrivateData->magic = (uintptr_t)psPrivateData;
 #endif
 
+	/*
+		Here we pass the file pointer which will passed through to our
+		OSConnectionPrivateDataInit function where we can save it so
+		we can back reference the file structure from it's connection
+	*/
 	eError = PVRSRVConnectionConnect(&psPrivateData->pvConnectionData, (IMG_PVOID) pFile);
 	if (eError != PVRSRV_OK)
 	{
@@ -594,16 +751,34 @@ static int PVRSRVOpen(struct inode unref__ * pInode, struct file *pFile)
 	list_add_tail(&psPrivateData->sDRMAuthListItem, &sDRMAuthListHead);
 #endif
 	PRIVATE_DATA(pFile) = psPrivateData;
-	mutex_unlock(&gPVRSRVLock);
+	OSReleaseBridgeLock();
 	return 0;
 
 err_unlock:	
-	mutex_unlock(&gPVRSRVLock);
+	OSReleaseBridgeLock();
 	module_put(THIS_MODULE);
 	return iRet;
 }
 
 
+/*!
+******************************************************************************
+
+ @Function		PVRSRVRelease
+
+ @Description
+
+ Release access the PVR services node - called when a file is closed, whether
+ at exit or using close(2) system call.
+
+ @input pInode - the inode for the file being released
+ @input pvPrivData - driver private data
+
+ @input pFile - the file handle data for the actual file being released
+
+ @Return 0 for success or <0 for an error.
+
+*****************************************************************************/
 #if defined(SUPPORT_DRM)
 void PVRSRVRelease(void *pvPrivData)
 #else
@@ -612,7 +787,7 @@ static int PVRSRVRelease(struct inode unref__ * pInode, struct file *pFile)
 {
 	PVRSRV_FILE_PRIVATE_DATA *psPrivateData;
 
-	mutex_lock(&gPVRSRVLock);
+	OSAcquireBridgeLock();
 
 #if defined(SUPPORT_DRM)
 	psPrivateData = (PVRSRV_FILE_PRIVATE_DATA *)pvPrivData;
@@ -633,7 +808,7 @@ static int PVRSRVRelease(struct inode unref__ * pInode, struct file *pFile)
 #endif
 	}
 
-	mutex_unlock(&gPVRSRVLock);
+	OSReleaseBridgeLock();
 	module_put(THIS_MODULE);
 #if defined(SUPPORT_DRM)
 	return;
@@ -716,6 +891,10 @@ PVRSRV_ERROR OSCheckAuthentication(CONNECTION_DATA *psConnection, IMG_UINT32 ui3
 
 	psPrivateData = PRIVATE_DATA(psEnvConnection->psFile);
 
+	/*
+	 * If our connection was not authenticated, see if we have another
+	 * one that is.
+	 */
 	bAuthenticated = PVRDRMCheckAuthentication(psEnvConnection->psFile, psPrivateData->uPID);
 
 check_auth_exit:
@@ -729,8 +908,29 @@ check_auth_exit:
 
 	return PVRSRV_OK;
 }
-#endif 
+#endif /* defined(SUPPORT_DRM_AUTH_IMPORT) */
 
+/*!
+******************************************************************************
+
+ @Function		PVRCore_Init
+
+ @Description
+
+ Insert the driver into the kernel.
+
+ Readable and/or writable debugfs entries under /sys/kernel/debug/pvr are
+ created with PVRDebugFSCreateEntry().  These can be read at runtime to get
+ information about the device (eg. 'cat /sys/kernel/debug/pvr/nodes')
+
+ __init places the function in a special memory section that the kernel frees
+ once the function has been run.  Refer also to module_init() macro call below.
+
+ @input none
+
+ @Return none
+
+*****************************************************************************/
 
 
 PVRSRV_ERROR LinuxBridgeInit(void);
@@ -746,6 +946,10 @@ static int __init PVRCore_Init(void)
 	struct device *psDev;
 #endif
 
+	/*
+	 * Must come before attempting to print anything via Services.
+	 * For DRM, the initialisation will already have been done.
+	 */
 	PVRDPFInit();
 
 	PVR_TRACE(("PVRCore_Init"));
@@ -814,8 +1018,8 @@ static int __init PVRCore_Init(void)
 
 		goto init_failed;
 	}
-#endif	
-#endif	 
+#endif	/* defined(MODULE) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV) */
+#endif	/* defined(LDM_PLATFORM) */ 
 
 #if defined(LDM_PCI)
 #if defined(SUPPORT_DRM)
@@ -829,9 +1033,9 @@ static int __init PVRCore_Init(void)
 
 		goto init_failed;
 	}
-#endif 
+#endif /* LDM_PCI */
 
-	
+	/* Check that the driver probe function was called */
 	if (!bDriverProbeSucceeded)
 	{
 		PVR_TRACE(("PVRCore_Init: PVRSRVDriverProbe has not been called or did not succeed - check that hardware is detected"));
@@ -851,6 +1055,10 @@ static int __init PVRCore_Init(void)
 
 	PVR_TRACE(("PVRCore_Init: major device %d", AssignedMajorNumber));
 
+	/*
+	 * This code facilitates automatic device node creation on platforms
+	 * with udev (or similar).
+	 */
 	psPvrClass = class_create(THIS_MODULE, "pvr");
 
 	if (IS_ERR(psPvrClass))
@@ -868,7 +1076,7 @@ static int __init PVRCore_Init(void)
 		error = -EBUSY;
 		goto destroy_class;
 	}
-#endif 
+#endif /* !defined(SUPPORT_DRM) */
 
 #if defined(PVR_ANDROID_NATIVE_WINDOW_HAS_SYNC)
 	eError = pvr_sync_init();
@@ -895,13 +1103,13 @@ static int __init PVRCore_Init(void)
 	}
 #endif
 
-	
+	/* MTK MFG system entry */
 	MTKMFGSystemInit();
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	register_early_suspend(&PVRSRVEarlySuspendHandler);
 #endif
-
+    
 #if defined(MTK_DEBUG_PROC_PRINT)
 	MTKPP_Init();
 #endif
@@ -929,11 +1137,11 @@ sys_deinit:
 #else
 	PVR_ASSERT(gpsPVRLDMDev != NULL);
 	platform_device_unregister(gpsPVRLDMDev);
-#endif	
-#endif	
+#endif	/* (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)) */
+#endif	/* defined(MODULE) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV) */
 	platform_driver_unregister(&powervr_driver);
-#endif	
-#endif	
+#endif	/* defined (LDM_PLATFORM) */
+#endif	/* !defined(SUPPORT_DRM) */
 
 init_failed:
 	PVRMMapCleanup();
@@ -952,9 +1160,29 @@ dbgdrv_cleanup:
 #endif
 	return error;
 
-} 
+} /*PVRCore_Init*/
 
 
+/*!
+*****************************************************************************
+
+ @Function		PVRCore_Cleanup
+
+ @Description	
+
+ Remove the driver from the kernel.
+
+ There's no way we can get out of being unloaded other than panicking; we
+ just do everything and plough on regardless of error.
+
+ __exit places the function in a special memory section that the kernel frees
+ once the function has been run.  Refer also to module_exit() macro call below.
+
+ @input none
+
+ @Return none
+
+*****************************************************************************/
 static void __exit PVRCore_Cleanup(void)
 {
 	PVR_TRACE(("PVRCore_Cleanup"));
@@ -966,8 +1194,8 @@ static void __exit PVRCore_Cleanup(void)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&PVRSRVEarlySuspendHandler);
 #endif
-
-	
+    
+	/* MTK MFG sytem cleanup */
 	MTKMFGSystemDeInit();
 
 #if defined(SUPPORT_GPUTRACE_EVENTS)
@@ -997,7 +1225,7 @@ static void __exit PVRCore_Cleanup(void)
 #else
 	pci_unregister_driver(&powervr_driver);
 #endif
-#endif	
+#endif	/* defined(LDM_PCI) */
 
 #if defined (LDM_PLATFORM)
 #if defined(MODULE) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV)
@@ -1006,10 +1234,10 @@ static void __exit PVRCore_Cleanup(void)
 #else
 	PVR_ASSERT(gpsPVRLDMDev != NULL);
 	platform_device_unregister(gpsPVRLDMDev);
-#endif	
-#endif	
+#endif	/* (LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)) */
+#endif	/* defined(MODULE) && !defined(PVR_USE_PRE_REGISTERED_PLATFORM_DEV) */
 	platform_driver_unregister(&powervr_driver);
-#endif	
+#endif	/* defined (LDM_PLATFORM) */
 
 	PVRMMapCleanup();
 
@@ -1030,5 +1258,11 @@ static void __exit PVRCore_Cleanup(void)
 	PVR_TRACE(("PVRCore_Cleanup: unloading"));
 }
 
+/*
+ * These macro calls define the initialisation and removal functions of the
+ * driver.  Although they are prefixed `module_', they apply when compiling
+ * statically as well; in both cases they define the function the kernel will
+ * run to start/stop the driver.
+*/
 module_init(PVRCore_Init);
 module_exit(PVRCore_Cleanup);

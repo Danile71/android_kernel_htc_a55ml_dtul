@@ -321,7 +321,7 @@ PVRSRVHWOpTimeoutKM(IMG_VOID)
 	OSPanic();
 #endif
 	PVR_LOG(("HW operation timeout, dump server info"));
-	PVRSRVDebugRequest(DEBUG_REQUEST_VERBOSITY_LOW,IMG_NULL);
+	PVRSRVDebugRequest(DEBUG_REQUEST_VERBOSITY_MAX,IMG_NULL);
 	return PVRSRV_OK;
 }
 
@@ -534,11 +534,23 @@ IMG_INT BridgedDispatchKM(CONNECTION_DATA * psConnection,
 		psBridgeIn = psEnvData->pvBridgeData;
 		psBridgeOut = (IMG_PVOID)((IMG_PBYTE)psBridgeIn + PVRSRV_MAX_BRIDGE_IN_SIZE);
 
-		/* check we are not using a bigger bridge than allocated */
-#if defined(DEBUG)
-		PVR_ASSERT(psBridgePackageKM->ui32InBufferSize < PVRSRV_MAX_BRIDGE_IN_SIZE);
-		PVR_ASSERT(psBridgePackageKM->ui32OutBufferSize < PVRSRV_MAX_BRIDGE_OUT_SIZE);
-#endif
+		if (psBridgePackageKM->ui32InBufferSize > PVRSRV_MAX_BRIDGE_IN_SIZE)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "%s: Bridge input buffer too small "
+			        "(data size %u, buffer size %u)!", __FUNCTION__,
+			        psBridgePackageKM->ui32InBufferSize, PVRSRV_MAX_BRIDGE_IN_SIZE));
+			err = PVRSRV_ERROR_BUFFER_TOO_SMALL;
+			goto return_fault;
+		}
+
+		if (psBridgePackageKM->ui32OutBufferSize > PVRSRV_MAX_BRIDGE_OUT_SIZE)
+		{
+			PVR_DPF((PVR_DBG_ERROR, "%s: Bridge output buffer too small "
+			        "(data size %u, buffer size %u)!", __FUNCTION__,
+			        psBridgePackageKM->ui32InBufferSize, PVRSRV_MAX_BRIDGE_IN_SIZE));
+			err = PVRSRV_ERROR_BUFFER_TOO_SMALL;
+			goto return_fault;
+		}
 
 		if(psBridgePackageKM->ui32InBufferSize > 0)
 		{

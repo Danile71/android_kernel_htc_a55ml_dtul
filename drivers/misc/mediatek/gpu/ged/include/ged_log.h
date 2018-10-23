@@ -29,21 +29,23 @@ GED_ERROR ged_log_buf_reset(GED_LOG_BUF_HANDLE hLogBuf);
 
 void ged_log_buf_free(GED_LOG_BUF_HANDLE hLogBuf);
 
+/* query by Name, return NULL if not found */
 GED_LOG_BUF_HANDLE ged_log_buf_get(const char* pszName);
 
+/* register a pointer, it will be set after the corresponding buffer is allcated. */
 int ged_log_buf_get_early(const char* pszName, GED_LOG_BUF_HANDLE *callback_set_handle);
 
 GED_ERROR ged_log_buf_print(GED_LOG_BUF_HANDLE hLogBuf, const char *fmt, ...) GED_LOG_BUF_FORMAT_PRINTF(2,3);
 
 enum
 {
-    
+    /* bit 0~7 reserved for internal used */
     GED_RESVERED                = 0xFF,
 
-    
+    /* log with a prefix kernel time */
     GED_LOG_ATTR_TIME           = 0x100,
 
-    
+    /* log with a prefix user time, pid, tid */
     GED_LOG_ATTR_TIME_TPT       = 0x200,
 };
 

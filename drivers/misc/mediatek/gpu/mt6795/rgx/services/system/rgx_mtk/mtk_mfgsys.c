@@ -10,6 +10,7 @@
 #include "pvrsrv.h"
 #include "rgxhwperf.h"
 
+/* MTK: disable 6795 DVFS temporarily, fix and remove me */
 
 #ifdef CONFIG_MTK_HIBERNATION
 #include "sysconfig.h"
@@ -22,7 +23,7 @@
 #include <linux/mtk_gpu_utility.h>
 
 #define MTK_DEFER_DVFS_WORK_MS          10000
-#define MTK_DVFS_SWITCH_INTERVAL_MS     50
+#define MTK_DVFS_SWITCH_INTERVAL_MS     50//16//100
 #define MTK_SYS_BOOST_DURATION_MS       50
 #define MTK_WAIT_FW_RESPONSE_TIMEOUT_US 5000
 #define MTK_GPIO_REG_OFFSET             0x30
@@ -127,7 +128,7 @@ static IMG_VOID MTKWriteBackFreqToRGX(IMG_UINT32 ui32DeviceIndex, IMG_UINT32 ui3
     PVRSRV_DATA *psPVRSRVData = PVRSRVGetPVRSRVData();
     PVRSRV_DEVICE_NODE* psDeviceNode = psPVRSRVData->apsRegisteredDevNodes[ui32DeviceIndex];
     RGX_DATA* psRGXData = (RGX_DATA*)psDeviceNode->psDevConfig->hDevData;
-    psRGXData->psRGXTimingInfo->ui32CoreClockSpeed = ui32NewFreq * 1000; 
+    psRGXData->psRGXTimingInfo->ui32CoreClockSpeed = ui32NewFreq * 1000; /* kHz to Hz write to RGX as the same unit */
 }
 
 static IMG_VOID MTKEnableMfgClock(void)
@@ -142,7 +143,7 @@ static IMG_VOID MTKEnableMfgClock(void)
 #if defined(CONFIG_ARCH_MT6795)
 #else
 #ifdef CONFIG_MTK_SEGMENT_TEST
-	
+	//check mfg
 	if (DRV_Reg32(0xf0006610) & 0x10)
 	{
 		efuse_mfg_enable =1;
@@ -203,7 +204,7 @@ static int MTKInitHWAPM(void)
     	DRV_WriteReg32(g_pvRegsKM + 0x24, 0x80076674);
     	DRV_WriteReg32(g_pvRegsKM + 0x28, 0x0e6d0a09);
 #else
-        
+        //DRV_WriteReg32(g_pvRegsKM + 0xa0, 0x00bd0140);
         DRV_WriteReg32(g_pvRegsKM + 0x24, 0x002f313f);
         DRV_WriteReg32(g_pvRegsKM + 0x28, 0x3f383609);
         DRV_WriteReg32(g_pvRegsKM + 0xe0, 0x6c630176);
@@ -234,7 +235,7 @@ static IMG_BOOL MTKDoGpuDVFS(IMG_UINT32 ui32NewFreqID, IMG_BOOL bIdleDevice)
     IMG_UINT32 ui32RGXDevIdx;
     IMG_BOOL bet = IMG_FALSE;
 
-    
+    // bottom bound
     if (ui32NewFreqID > g_bottom_freq_id)
     {
         ui32NewFreqID = g_bottom_freq_id;
@@ -244,19 +245,19 @@ static IMG_BOOL MTKDoGpuDVFS(IMG_UINT32 ui32NewFreqID, IMG_BOOL bIdleDevice)
         ui32NewFreqID = g_cust_boost_freq_id;
     }
 
-    
+    // up bound
     if (ui32NewFreqID < g_cust_upbound_freq_id)
     {
         ui32NewFreqID = g_cust_upbound_freq_id;
     }
 
-    
+    // thermal power limit
     if (ui32NewFreqID < mt_gpufreq_get_thermal_limit_index())
     {
         ui32NewFreqID = mt_gpufreq_get_thermal_limit_index();
     }
 
-    
+    // no change
     if (ui32NewFreqID == mt_gpufreq_get_cur_freq_index())
     {
         return IMG_FALSE;
@@ -422,10 +423,10 @@ static IMG_UINT32 MTKCalPowerIndex(IMG_VOID)
 		return 0;
 	}
 
-    
+    //writes 1 to GPIO_INPUT_REQ, bit[0]
     DRV_WriteReg32(pvGPIO_REG, DRV_Reg32(pvGPIO_REG) | 0x1);
 
-    
+    //wait for 1 in GPIO_OUTPUT_REQ, bit[16]
     bTimeout = IMG_TRUE;
     u32Deadline = OSClockus() + MTK_WAIT_FW_RESPONSE_TIMEOUT_US;
     while(OSClockus() < u32Deadline)
@@ -437,7 +438,7 @@ static IMG_UINT32 MTKCalPowerIndex(IMG_VOID)
         }
     }
 
-    
+    //writes 0 to GPIO_INPUT_REQ, bit[0]
     DRV_WriteReg32(pvGPIO_REG, DRV_Reg32(pvGPIO_REG) & (~0x1));
     if (bTimeout)
     {
@@ -445,16 +446,16 @@ static IMG_UINT32 MTKCalPowerIndex(IMG_VOID)
         return 0;
     }
 
-    
+    //read GPIO_OUTPUT_DATA, bit[24]
     ui32State = DRV_Reg32(pvGPIO_REG) >> 24;
 
-    
+    //read POWER_ESTIMATE_RESULT
     ui32Result = DRV_Reg32(pvPOWER_ESTIMATE_RESULT);
 
-    
+    //writes 1 to GPIO_OUTPUT_ACK, bit[17]
     DRV_WriteReg32(pvGPIO_REG, DRV_Reg32(pvGPIO_REG)|0x20000);
 
-    
+    //wait for 0 in GPIO_OUTPUT_REG, bit[16]
     bTimeout = IMG_TRUE;
     u32Deadline = OSClockus() + MTK_WAIT_FW_RESPONSE_TIMEOUT_US;
     while(OSClockus() < u32Deadline)
@@ -466,7 +467,7 @@ static IMG_UINT32 MTKCalPowerIndex(IMG_VOID)
         }
     }
 
-    
+    //writes 0 to GPIO_OUTPUT_ACK, bit[17]
     DRV_WriteReg32(pvGPIO_REG, DRV_Reg32(pvGPIO_REG) & (~0x20000));
     if (bTimeout)
     {
@@ -513,15 +514,46 @@ static IMG_BOOL MTKGpuDVFSPolicy(IMG_UINT32 ui32GPULoading, unsigned int* pui32N
     int i32MaxLevel = (int)(mt_gpufreq_get_dvfs_table_num() - 1);
     int i32CurFreqID = (int)mt_gpufreq_get_cur_freq_index();
     int i32NewFreqID = i32CurFreqID;
-    if (ui32GPULoading >= 90)
+
+    if (ui32GPULoading >= 99)
+    {
+        i32NewFreqID = 0;
+    }
+    else if (ui32GPULoading <= 1)
+    {
+        i32NewFreqID = i32MaxLevel;
+    }
+    else if (ui32GPULoading >= 85)
+    {
+        i32NewFreqID -= 2;
+    }
+    else if (ui32GPULoading <= 30)
+    {
+        i32NewFreqID += 2;
+    }
+    else if (ui32GPULoading >= 70)
     {
         i32NewFreqID -= 1;
     }
-    else if (ui32GPULoading <= 70)
+    else if (ui32GPULoading <= 50)
     {
         i32NewFreqID += 1;
     }
 
+    if (i32NewFreqID < i32CurFreqID)
+    {
+        if (gpu_pre_loading * 17 / 10 < ui32GPULoading)
+        {
+            i32NewFreqID -= 1;
+        }
+    }
+    else if (i32NewFreqID > i32CurFreqID)
+    {
+        if (ui32GPULoading * 17 / 10 < gpu_pre_loading)
+        {
+            i32NewFreqID += 1;
+        }
+    }
 
     if (i32NewFreqID > i32MaxLevel)
     {
@@ -573,7 +605,7 @@ static IMG_VOID MTKDVFSTimerFuncCB(IMG_PVOID pvData)
     {
         IMG_UINT32 ui32NewFreqID;
 
-        
+        // calculate power index
 #ifdef MTK_CAL_POWER_INDEX
         gpu_power = MTKCalPowerIndex();
 #else
@@ -584,7 +616,7 @@ static IMG_VOID MTKDVFSTimerFuncCB(IMG_PVOID pvData)
 
         OSLockAcquire(ghDVFSLock);
 
-        
+        // check system boost duration
         if ((g_sys_dvfs_time_ms > 0) && (OSClockms() - g_sys_dvfs_time_ms < MTK_SYS_BOOST_DURATION_MS))
         {
             OSLockRelease(ghDVFSLock);
@@ -595,7 +627,7 @@ static IMG_VOID MTKDVFSTimerFuncCB(IMG_PVOID pvData)
             g_sys_dvfs_time_ms = 0;
         }
 
-        
+        // do gpu dvfs
         if (MTKGpuDVFSPolicy(gpu_loading, &ui32NewFreqID))
         {
             MTKDoGpuDVFS(ui32NewFreqID, gpu_dvfs_force_idle == 0 ? IMG_FALSE : IMG_TRUE);
@@ -693,7 +725,7 @@ PVRSRV_ERROR MTKDevPostPowerState(PVRSRV_DEV_POWER_STATE eNewPowerState,
 #if 0
         if (g_iSkipCount > 0)
         {
-            
+            // During boot up
             unsigned int ui32NewFreqID = mt_gpufreq_get_dvfs_table_num() - 1;
             unsigned int ui32CurFreqID = mt_gpufreq_get_cur_freq_index();
             if (ui32NewFreqID != ui32CurFreqID)
@@ -754,8 +786,8 @@ static void MTKSetBottomGPUFreq(unsigned int ui32FreqLevel)
 
     OSLockAcquire(ghDVFSLock);
 
-    
-    
+    // 0 => The highest frequency
+    // table_num - 1 => The lowest frequency
     g_bottom_freq_id = ui32MaxLevel - ui32FreqLevel;
     gpu_bottom_freq = mt_gpufreq_get_frequency_by_level(g_bottom_freq_id);
 
@@ -790,8 +822,8 @@ static void MTKCustomBoostGpuFreq(unsigned int ui32FreqLevel)
 
     OSLockAcquire(ghDVFSLock);
 
-    
-    
+    // 0 => The highest frequency
+    // table_num - 1 => The lowest frequency
     g_cust_boost_freq_id = ui32MaxLevel - ui32FreqLevel;
     gpu_cust_boost_freq = mt_gpufreq_get_frequency_by_level(g_cust_boost_freq_id);
 
@@ -820,8 +852,8 @@ static void MTKCustomUpBoundGpuFreq(unsigned int ui32FreqLevel)
 
     OSLockAcquire(ghDVFSLock);
 
-    
-    
+    // 0 => The highest frequency
+    // table_num - 1 => The lowest frequency
     g_cust_upbound_freq_id = ui32MaxLevel - ui32FreqLevel;
     gpu_cust_upbound_freq = mt_gpufreq_get_frequency_by_level(g_cust_upbound_freq_id);
 

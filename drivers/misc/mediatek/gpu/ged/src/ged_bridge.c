@@ -7,6 +7,7 @@
 #include "ged_profile_dvfs.h"
 #include "ged_monitor_3D_fence.h"
 
+//-----------------------------------------------------------------------------
 int ged_bridge_log_buf_get(
     GED_BRIDGE_IN_LOGBUFGET *psLogBufGetIN,
     GED_BRIDGE_OUT_LOGBUFGET *psLogBufGetOUT)
@@ -15,6 +16,7 @@ int ged_bridge_log_buf_get(
     psLogBufGetOUT->eError = psLogBufGetOUT->hLogBuf ? GED_OK : GED_ERROR_FAIL;
     return 0;
 }
+//-----------------------------------------------------------------------------
 int ged_bridge_log_buf_write(
     GED_BRIDGE_IN_LOGBUFWRITE *psLogBufWriteIN,
     GED_BRIDGE_OUT_LOGBUFWRITE *psLogBufWriteOUT)
@@ -25,7 +27,7 @@ int ged_bridge_log_buf_write(
 #if 0
     if (ged_log_buf_write(
             psLogBufWriteIN->hLogBuf, 
-            psLogBufWriteIN->acLogBuf,
+            /*from user*/psLogBufWriteIN->acLogBuf,
             GED_BRIDGE_IN_LOGBUF_SIZE) > 0)
     {
         psLogBufWriteOUT->eError = GED_OK;
@@ -37,6 +39,7 @@ int ged_bridge_log_buf_write(
 #endif
     return 0;
 }
+//-----------------------------------------------------------------------------
 int ged_bridge_log_buf_reset(
     GED_BRIDGE_IN_LOGBUFRESET *psLogBufResetIn,
     GED_BRIDGE_OUT_LOGBUFRESET *psLogBufResetOUT)
@@ -44,6 +47,7 @@ int ged_bridge_log_buf_reset(
     psLogBufResetOUT->eError = ged_log_buf_reset(psLogBufResetIn->hLogBuf);
     return 0;
 }
+//-----------------------------------------------------------------------------
 int ged_bridge_boost_gpu_freq(
     GED_BRIDGE_IN_BOOSTGPUFREQ *psBoostGpuFreqIN,
     GED_BRIDGE_OUT_BOOSTGPUFREQ *psBoostGpuFreqOUT)
@@ -65,6 +69,7 @@ int ged_bridge_boost_gpu_freq(
 #endif
     return 0;
 }
+//-----------------------------------------------------------------------------
 int ged_bridge_monitor_3D_fence(
     GED_BRIDGE_IN_MONITOR3DFENCE *psMonitor3DFenceINT,
     GED_BRIDGE_OUT_MONITOR3DFENCE *psMonitor3DFenceOUT)

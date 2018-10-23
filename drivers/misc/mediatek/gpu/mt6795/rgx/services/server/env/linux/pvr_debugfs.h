@@ -1,4 +1,4 @@
- /*!
+/*************************************************************************/ /*!
 @File
 @Title          Functions for creating debugfs directories and entries.
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
@@ -38,7 +38,7 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ 
+*/ /**************************************************************************/
 
 #if !defined(__PVR_DEBUGFS_H__)
 #define __PVR_DEBUGFS_H__
@@ -61,29 +61,34 @@ typedef IMG_BOOL (PVRSRV_GET_NEXT_STAT_FUNC)(void *pvStatPtr,
 typedef IMG_UINT32 (PVRSRV_INC_STAT_MEM_REFCOUNT_FUNC)(void *pvStatPtr);
 typedef IMG_UINT32 (PVRSRV_DEC_STAT_MEM_REFCOUNT_FUNC)(void *pvStatPtr);
 
+typedef struct _PVR_DEBUGFS_DIR_DATA_ PVR_DEBUGFS_DIR_DATA;
+typedef struct _PVR_DEBUGFS_ENTRY_DATA_ PVR_DEBUGFS_ENTRY_DATA;
+typedef struct _PVR_DEBUGFS_DRIVER_STAT_ PVR_DEBUGFS_DRIVER_STAT;
+
 int PVRDebugFSInit(void);
 void PVRDebugFSDeInit(void);
 
 int PVRDebugFSCreateEntryDir(IMG_CHAR *pszName,
-			     void *pvParentDir,
-				 void **ppvNewDirHandle);
+							 PVR_DEBUGFS_DIR_DATA *psParentDir,
+							 PVR_DEBUGFS_DIR_DATA **ppsNewDir);
 
-void PVRDebugFSRemoveEntryDir(void *pvDir);
+void PVRDebugFSRemoveEntryDir(PVR_DEBUGFS_DIR_DATA **ppsDir);
 
 int PVRDebugFSCreateEntry(const char *pszName,
-			  void *pvDir,
-			  struct seq_operations *psReadOps,
-			  PVRSRV_ENTRY_WRITE_FUNC *pfnWrite,
-			  void *pvData,
-			  void **ppvNewEntry);
-void PVRDebugFSRemoveEntry(void *pvDebugFSEntry);
+						  PVR_DEBUGFS_DIR_DATA *psParentDir,
+						  struct seq_operations *psReadOps,
+						  PVRSRV_ENTRY_WRITE_FUNC *pfnWrite,
+						  void *pvData,
+						  PVR_DEBUGFS_ENTRY_DATA **ppsNewEntry);
 
-void *PVRDebugFSCreateStatisticEntry(const char *pszName,
-				     void *pvDir,
-				     PVRSRV_GET_NEXT_STAT_FUNC *pfnGetNextStat,
-					 PVRSRV_INC_STAT_MEM_REFCOUNT_FUNC	*pfnIncStatMemRefCount,
-					 PVRSRV_INC_STAT_MEM_REFCOUNT_FUNC	*pfnDecStatMemRefCount,
-					 void *pvData);
-void PVRDebugFSRemoveStatisticEntry(void *pvStatEntry);
+void PVRDebugFSRemoveEntry(PVR_DEBUGFS_ENTRY_DATA *psDebugFSEntry);
 
-#endif 
+PVR_DEBUGFS_DRIVER_STAT *PVRDebugFSCreateStatisticEntry(const char *pszName,
+														PVR_DEBUGFS_DIR_DATA *psDir,
+														PVRSRV_GET_NEXT_STAT_FUNC *pfnGetNextStat,
+														PVRSRV_INC_STAT_MEM_REFCOUNT_FUNC	*pfnIncStatMemRefCount,
+														PVRSRV_INC_STAT_MEM_REFCOUNT_FUNC	*pfnDecStatMemRefCount,
+														void *pvData);
+void PVRDebugFSRemoveStatisticEntry(PVR_DEBUGFS_DRIVER_STAT *psStatEntry);
+
+#endif /* !defined(__PVR_DEBUGFS_H__) */

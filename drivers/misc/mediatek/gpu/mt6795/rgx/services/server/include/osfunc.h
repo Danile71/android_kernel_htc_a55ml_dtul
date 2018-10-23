@@ -1,4 +1,4 @@
- /*!
+/**************************************************************************/ /*!
 @File
 @Title          OS functions header
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
@@ -39,7 +39,7 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ 
+*/ /***************************************************************************/
 
 #ifdef DEBUG_RELEASE_BUILD
 #pragma optimize( "", off )
@@ -62,6 +62,9 @@ extern "C" {
 #include "pvrsrv_device.h"
 #include "device.h"
 
+/******************************************************************************
+ * Static defines
+ *****************************************************************************/
 #define KERNEL_ID			0xffffffffL
 #define ISR_ID				0xfffffffdL
 
@@ -89,12 +92,25 @@ PVRSRV_ERROR OSUninstallMISR(IMG_HANDLE hMISRData);
 PVRSRV_ERROR OSScheduleMISR(IMG_HANDLE hMISRData);
 
 
- 
+/*************************************************************************/ /*!
+@Function       OSThreadCreate
+@Description    Creates a kernel thread and starts it running. The caller
+                is responsible for informing the thread that it must finish
+                and return from the pfnThread function. It is not possible
+                to kill or terminate it. The new thread runs with the default
+                priority provided by the Operating System.
+@Output         phThread       Returned handle to the thread.
+@Input          pszThreadName  Name to assign to the thread.
+@Input          pfnThread      Thread entry point function.
+@Input          hData          Thread specific data pointer for pfnThread().
+@Return         Standard PVRSRV_ERROR error code.
+*/ /**************************************************************************/
 PVRSRV_ERROR OSThreadCreate(IMG_HANDLE *phThread,
 							IMG_CHAR *pszThreadName,
 							PFN_THREAD pfnThread,
 							IMG_VOID *hData);
 
+/*! Available priority levels for the creation of a new Kernel Thread. */
 typedef enum priority_levels
 {
 	HIGHEST_PRIORITY = 0,
@@ -102,18 +118,40 @@ typedef enum priority_levels
 	NORMAL_PRIORITY,
 	LOW_PRIORITY,
 	LOWEST_PRIORITY,
-	NOSET_PRIORITY,   
-	LAST_PRIORITY     
+	NOSET_PRIORITY,   /* With this option the priority level is is the default for the given OS */
+	LAST_PRIORITY     /* This must be always the last entry */
 } OS_THREAD_LEVEL;
 
- 
+/*************************************************************************/ /*!
+@Function       OSThreadCreatePriority
+@Description    As OSThreadCreate, this function creates a kernel thread and
+                starts it running. The difference is that with this function
+                is possible to specify the priority used to schedule the new
+                thread.
+
+@Output         phThread        Returned handle to the thread.
+@Input          pszThreadName   Name to assign to the thread.
+@Input          pfnThread       Thread entry point function.
+@Input          hData           Thread specific data pointer for pfnThread().
+@Input          eThreadPriority Priority level to assign to the new thread.
+@Return         Standard PVRSRV_ERROR error code.
+*/ /**************************************************************************/
 PVRSRV_ERROR OSThreadCreatePriority(IMG_HANDLE *phThread,
 							IMG_CHAR *pszThreadName,
 							PFN_THREAD pfnThread,
 							IMG_VOID *hData,
 							OS_THREAD_LEVEL eThreadPriority);
 
- 
+/*************************************************************************/ /*!
+@Function       OSThreadDestroy
+@Description    Waits for the thread to end and then destroys the thread
+                handle memory. This function will block and wait for the
+                thread to finish successfully, thereby providing a sync point
+                for the thread completing its work. No attempt is made to kill
+                or otherwise terminate the thread.
+@Input          phThread  The thread handle returned by OSThreadCreate().
+@Return         Standard PVRSRV_ERROR error code.
+*/ /**************************************************************************/
 PVRSRV_ERROR OSThreadDestroy(IMG_HANDLE hThread);
 
 IMG_VOID OSMemCopy(IMG_VOID *pvDst, const IMG_VOID *pvSrc, IMG_SIZE_T ui32Size);
@@ -178,14 +216,43 @@ PVRSRV_ERROR OSEventObjectOpen(IMG_HANDLE hEventObject,
 											IMG_HANDLE *phOSEvent);
 PVRSRV_ERROR OSEventObjectClose(IMG_HANDLE hOSEventKM);
 
+/* Avoid macros so we don't evaluate pszSrc twice */
 static INLINE IMG_CHAR *OSStringCopy(IMG_CHAR *pszDest, const IMG_CHAR *pszSrc)
 {
 	return OSStringNCopy(pszDest, pszSrc, OSStringLength(pszSrc) + 1);
 }
 
+/*!
+******************************************************************************
+
+ @Function OSWaitus
+ 
+ @Description 
+    This function implements a busy wait of the specified microseconds
+    This function does NOT release thread quanta
+ 
+ @Input ui32Timeus - (us)
+
+ @Return IMG_VOID
+
+******************************************************************************/ 
 IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus);
 
 
+/*!
+******************************************************************************
+
+ @Function OSSleepms
+ 
+ @Description 
+    This function implements a sleep of the specified milliseconds
+    This function may allow pre-emption if implemented
+ 
+ @Input ui32Timems - (ms)
+
+ @Return IMG_VOID
+
+******************************************************************************/ 
 IMG_VOID OSSleepms(IMG_UINT32 ui32Timems);
 
 IMG_VOID OSReleaseThreadQuanta(IMG_VOID);
@@ -209,6 +276,17 @@ PVRSRV_ERROR OSEnableTimer(IMG_HANDLE hTimer);
 PVRSRV_ERROR OSDisableTimer(IMG_HANDLE hTimer);
 
 
+/******************************************************************************
+
+ @Function		OSPanic
+
+ @Description	Take action in response to an unrecoverable driver error
+
+ @Input    IMG_VOID
+
+ @Return   IMG_VOID
+
+******************************************************************************/
 IMG_VOID OSPanic(IMG_VOID);
 
 IMG_BOOL OSProcHasPrivSrvInit(IMG_VOID);
@@ -224,10 +302,20 @@ IMG_BOOL OSAccessOK(IMG_VERIFY_TEST eVerification, IMG_VOID *pvUserPtr, IMG_SIZE
 PVRSRV_ERROR OSCopyToUser(IMG_PVOID pvProcess, IMG_VOID *pvDest, const IMG_VOID *pvSrc, IMG_SIZE_T ui32Bytes);
 PVRSRV_ERROR OSCopyFromUser(IMG_PVOID pvProcess, IMG_VOID *pvDest, const IMG_VOID *pvSrc, IMG_SIZE_T ui32Bytes);
 
-
+							
 IMG_VOID OSWriteMemoryBarrier(IMG_VOID);
 IMG_VOID OSMemoryBarrier(IMG_VOID);
 
+/* These functions alter the behaviour of OSEventObjectWait*() calls.
+ * When ReleasePVRLock is set the PVR/bridge lock is released prior to the
+ * thread entering the descheduled wait state to allow other bridge call
+ * activity. When KeepPVRLock is set the bridge lock is not released and is
+ * held while the thread is descheduled in a wait state. ReleasePVRLock
+ * is considered the default state and it is recommended any use of
+ * KeepPVRLock is paired with a call to the RelasePVRLock in the same scope.
+ * NOTE: This release/keep state may only be changed by the thread (by calling
+ * these Set functions) when it has been able to obtain the bridge lock first.
+ */
 IMG_VOID OSSetReleasePVRLock(IMG_VOID);
 IMG_VOID OSSetKeepPVRLock(IMG_VOID);
 IMG_BOOL OSGetReleasePVRLock(IMG_VOID);
@@ -239,6 +327,8 @@ typedef struct _OSWR_LOCK_ *POSWR_LOCK;
 PVRSRV_ERROR OSWRLockCreate(POSWR_LOCK *ppsLock);
 IMG_VOID OSWRLockDestroy(POSWR_LOCK psLock);
 
+/* Linux kernel requires these functions defined as macros to avoid
+ * lockdep issues */
 #if defined(__linux__) && defined(__KERNEL__)
 
 struct _OSWR_LOCK_
@@ -246,6 +336,7 @@ struct _OSWR_LOCK_
 	struct rw_semaphore sRWLock;
 };
 
+/* Lock classes used for each rw semaphore */
 typedef enum RWLockClasses
 {
 	GLOBAL_DBGNOTIFY = 0,
@@ -262,16 +353,16 @@ typedef enum RWLockClasses
 #define OSWRLockAcquireWrite(psLock, ui32class)  ({down_write_nested(&psLock->sRWLock, ui32class); PVRSRV_OK;})
 #define OSWRLockReleaseWrite(psLock)             ({up_write(&psLock->sRWLock); PVRSRV_OK;})
 
-#else 
+#else /* defined(__linux__) && defined(__KERNEL__) */
 
 IMG_VOID OSWRLockAcquireRead(POSWR_LOCK psLock, IMG_UINT32 ui32class);
 IMG_VOID OSWRLockReleaseRead(POSWR_LOCK psLock);
 IMG_VOID OSWRLockAcquireWrite(POSWR_LOCK psLock, IMG_UINT32 ui32class);
 IMG_VOID OSWRLockReleaseWrite(POSWR_LOCK psLock);
 
-#endif 
+#endif /* defined(__linux__) && defined(__KERNEL__) */
 
-#else 
+#else /* defined(__linux__) || (UNDER_CE) || defined(__QNXNTO__) */
 struct _OSWR_LOCK_ {
 	IMG_UINT32 ui32Dummy;
 };
@@ -305,7 +396,7 @@ static INLINE IMG_VOID OSWRLockReleaseWrite(POSWR_LOCK psLock)
 {
 	PVR_UNREFERENCED_PARAMETER(psLock);
 }
-#endif 
+#endif /* defined(__linux__) || (UNDER_CE) || defined(__QNXNTO__) */
 
 IMG_UINT64 OSDivide64r64(IMG_UINT64 ui64Divident, IMG_UINT32 ui32Divisor, IMG_UINT32 *pui32Remainder);
 IMG_UINT32 OSDivide64(IMG_UINT64 ui64Divident, IMG_UINT32 ui32Divisor, IMG_UINT32 *pui32Remainder);
@@ -316,6 +407,9 @@ IMG_VOID OSAcquireBridgeLock(IMG_VOID);
 IMG_VOID OSReleaseBridgeLock(IMG_VOID);
 
 
+/*
+ *  Functions for providing support for PID statistics.
+ */
 typedef IMG_BOOL (OS_GET_STATS_ELEMENT_FUNC)(IMG_PVOID pvStatPtr,
                                              IMG_UINT32 ui32StatNumber,
                                              IMG_INT32* pi32StatData,
@@ -331,12 +425,15 @@ IMG_PVOID OSCreateStatisticEntry(IMG_CHAR* pszName, IMG_PVOID pvFolder,
                                  IMG_PVOID pvData);
 IMG_VOID OSRemoveStatisticEntry(IMG_PVOID pvEntry);
 IMG_PVOID OSCreateStatisticFolder(IMG_CHAR *pszName, IMG_PVOID pvFolder);
-IMG_VOID OSRemoveStatisticFolder(IMG_PVOID pvFolder);
+IMG_VOID OSRemoveStatisticFolder(IMG_PVOID *ppvFolder);
 
 #if defined (__cplusplus)
 }
 #endif
 
-#endif 
+#endif /* __OSFUNC_H__ */
 
+/******************************************************************************
+ End of file (osfunc.h)
+******************************************************************************/
 

@@ -38,9 +38,11 @@
 
 #define GED_DRIVER_DEVICE_NAME "ged"
 
-#define GED_IOCTL_PARAM_BUF_SIZE 0x3000 
+#define GED_IOCTL_PARAM_BUF_SIZE 0x3000 //12KB
 
 #ifdef GED_DEBUG
+#define GED_LOG_BUF_COMMON_FENCE "FENCE"
+static GED_LOG_BUF_HANDLE ghLogBuf_FENCE = 0;
 #define GED_LOG_BUF_COMMON_GLES "GLES"
 static GED_LOG_BUF_HANDLE ghLogBuf_GLES = 0;
 GED_LOG_BUF_HANDLE ghLogBuf_GED = 0;
@@ -48,6 +50,9 @@ GED_LOG_BUF_HANDLE ghLogBuf_GED = 0;
 
 static void* gvIOCTLParamBuf = NULL;
 
+/******************************************************************************
+ * GED File operations
+ *****************************************************************************/
 static int ged_open(struct inode *inode, struct file *filp)
 {
     GED_LOGE("%s:%d:%d\n", __func__, MAJOR(inode->i_rdev), MINOR(inode->i_rdev));
@@ -96,7 +101,7 @@ static long ged_dispatch(GED_BRIDGE_PACKAGE *psBridgePackageKM)
             }
         }
 
-        
+        // we will change the below switch into a function pointer mapping table in the future
         switch(GED_GET_BRIDGE_ID(psBridgePackageKM->ui32FunctionID))
         {
         case GED_BRIDGE_COMMAND_LOG_BUF_GET:
@@ -212,6 +217,9 @@ unlock_and_return:
 }
 #endif
 
+/******************************************************************************
+ * Module related
+ *****************************************************************************/
 
 static struct file_operations ged_fops = {
     .owner = THIS_MODULE,
@@ -239,9 +247,10 @@ static void ged_exit(void)
 #ifdef GED_DEBUG
     ged_log_buf_free(ghLogBuf_GED);
     ghLogBuf_GED = 0;
-
     ged_log_buf_free(ghLogBuf_GLES);
     ghLogBuf_GLES = 0;
+    ged_log_buf_free(ghLogBuf_FENCE);
+    ghLogBuf_FENCE = 0;
 #endif
 
     ged_profile_dvfs_exit();
@@ -308,6 +317,7 @@ static int ged_init(void)
     }
 
 #ifdef GED_DEBUG
+    ghLogBuf_FENCE = ged_log_buf_alloc(256, 128 * 256, GED_LOG_BUF_TYPE_RINGBUFFER, GED_LOG_BUF_COMMON_FENCE, NULL);
     ghLogBuf_GLES = ged_log_buf_alloc(160, 128 * 160, GED_LOG_BUF_TYPE_RINGBUFFER, GED_LOG_BUF_COMMON_GLES, NULL);
     ghLogBuf_GED = ged_log_buf_alloc(32, 64 * 32, GED_LOG_BUF_TYPE_RINGBUFFER, "GED internal", NULL);
 #endif

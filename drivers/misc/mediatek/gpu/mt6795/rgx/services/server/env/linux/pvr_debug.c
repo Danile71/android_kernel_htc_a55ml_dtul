@@ -1,4 +1,4 @@
- /*!
+/*************************************************************************/ /*!
 @File
 @Title          Debug Functionality
 @Copyright      Copyright (c) Imagination Technologies Ltd. All Rights Reserved
@@ -39,7 +39,7 @@ PURPOSE AND NONINFRINGEMENT; AND (B) IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/ 
+*/ /**************************************************************************/
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <linux/kernel.h>
@@ -65,11 +65,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "lists.h"
 #include "osfunc.h"
 
+/* MTK */
 #include "mtk_version.h"
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 
+/******** BUFFERED LOG MESSAGES ********/
 
+/* Because we don't want to have to handle CCB wrapping, each buffered
+ * message is rounded up to PVRSRV_DEBUG_CCB_MESG_MAX bytes. This means
+ * there is the same fixed number of messages that can be stored,
+ * regardless of message length.
+ */
 
 #if defined(PVRSRV_DEBUG_CCB_MAX)
 
@@ -125,7 +132,7 @@ IMG_EXPORT void PVRSRVDebugPrintfDumpCCB(void)
 		PVRSRV_DEBUG_CCB *psDebugCCBEntry =
 			&gsDebugCCB[(giOffset + i) % PVRSRV_DEBUG_CCB_MAX];
 
-		
+		/* Early on, we won't have PVRSRV_DEBUG_CCB_MAX messages */
 		if (!psDebugCCBEntry->pszFile)
 		{
 			continue;
@@ -139,14 +146,14 @@ IMG_EXPORT void PVRSRVDebugPrintfDumpCCB(void)
 			   psDebugCCBEntry->ui32TID,
 			   psDebugCCBEntry->pcMesg);
 
-		
+		/* Clear this entry so it doesn't get printed the next time again. */
 		psDebugCCBEntry->pszFile = IMG_NULL;
 	}
 
 	mutex_unlock(&gsDebugCCBMutex);
 }
 
-#else 
+#else /* defined(PVRSRV_DEBUG_CCB_MAX) */
 static INLINE void
 AddToBufferCCB(const IMG_CHAR *pszFileName, IMG_UINT32 ui32Line,
                const IMG_CHAR *szBuffer)
@@ -158,12 +165,12 @@ AddToBufferCCB(const IMG_CHAR *pszFileName, IMG_UINT32 ui32Line,
 
 IMG_EXPORT void PVRSRVDebugPrintfDumpCCB(void)
 {
-	
+	/* Not available */
 }
 
-#endif 
+#endif /* defined(PVRSRV_DEBUG_CCB_MAX) */
 
-#endif 
+#endif /* defined(PVRSRV_NEED_PVR_DPF) */
 
 static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 						 const IMG_CHAR *pszFormat, va_list VArgs)
@@ -178,30 +185,35 @@ static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz,
 						const IMG_CHAR *pszFormat, ...)
 						IMG_FORMAT_PRINTF(3, 4);
 
+/* NOTE: Must NOT be static! Used in module.c.. */
 IMG_UINT32 gPVRDebugLevel =
 	(
 	 DBGPRIV_FATAL | DBGPRIV_ERROR | DBGPRIV_WARNING
 
 #if defined(PVRSRV_DEBUG_CCB_MAX)
 	 | DBGPRIV_BUFFERED
-#endif 
+#endif /* defined(PVRSRV_DEBUG_CCB_MAX) */
 
 #if defined(PVR_DPF_ADHOC_DEBUG_ON)
 	 | DBGPRIV_DEBUG
-#endif 
+#endif /* defined(PVR_DPF_ADHOC_DEBUG_ON) */
 	);
 
-#endif 
+#endif /* defined(PVRSRV_NEED_PVR_DPF) || defined(PVRSRV_NEED_PVR_TRACE) */
 
 #define	PVR_MAX_MSG_LEN PVR_MAX_DEBUG_MESSAGE_LEN
 
+/* Message buffer for non-IRQ messages */
 static IMG_CHAR gszBufferNonIRQ[PVR_MAX_MSG_LEN + 1];
 
+/* Message buffer for IRQ messages */
 static IMG_CHAR gszBufferIRQ[PVR_MAX_MSG_LEN + 1];
 
+/* The lock is used to control access to gszBufferNonIRQ */
 static struct mutex gsDebugMutexNonIRQ;
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
+/* The lock is used to control access to gszBufferIRQ */
 static spinlock_t gsDebugLockIRQ = SPIN_LOCK_UNLOCKED;
 #else
 static DEFINE_SPINLOCK(gsDebugLockIRQ);
@@ -247,6 +259,11 @@ static inline void SelectBuffer(IMG_CHAR **ppszBuf, IMG_UINT32 *pui32BufSiz)
 	}
 }
 
+/*
+ * Append a string to a buffer using formatted conversion.
+ * The function takes a variable number of arguments, pointed
+ * to by the var args list.
+ */
 static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR *pszFormat, va_list VArgs)
 {
 	IMG_UINT32 ui32Used;
@@ -260,10 +277,11 @@ static IMG_BOOL VBAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR
 	i32Len = vsnprintf(&pszBuf[ui32Used], ui32Space, pszFormat, VArgs);
 	pszBuf[ui32BufSiz - 1] = 0;
 
-	
+	/* Return true if string was truncated */
 	return i32Len < 0 || i32Len >= (IMG_INT32)ui32Space;
 }
 
+/* Actually required for ReleasePrintf too */
 
 void PVRDPFInit(void)
 {
@@ -273,7 +291,12 @@ void PVRDPFInit(void)
 #endif
 }
 
- 
+/*************************************************************************/ /*!
+@Function       PVRSRVReleasePrintf
+@Description    To output an important message to the user in release builds
+@Input          pszFormat   The message format string
+@Input          ...         Zero or more arguments for use by the format string
+*/ /**************************************************************************/
 void PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 {
 	va_list vaArgs;
@@ -304,7 +327,12 @@ void PVRSRVReleasePrintf(const IMG_CHAR *pszFormat, ...)
 
 #if defined(PVRSRV_NEED_PVR_TRACE)
 
- 
+/*************************************************************************/ /*!
+@Function       PVRTrace
+@Description    To output a debug message to the user
+@Input          pszFormat   The message format string
+@Input          ...         Zero or more arguments for use by the format string
+*/ /**************************************************************************/
 void PVRSRVTrace(const IMG_CHAR *pszFormat, ...)
 {
 	va_list VArgs;
@@ -335,10 +363,15 @@ void PVRSRVTrace(const IMG_CHAR *pszFormat, ...)
 	va_end(VArgs);
 }
 
-#endif 
+#endif /* defined(PVRSRV_NEED_PVR_TRACE) */
 
 #if defined(PVRSRV_NEED_PVR_DPF)
 
+/*
+ * Append a string to a buffer using formatted conversion.
+ * The function takes a variable number of arguments, calling
+ * VBAppend to do the actual work.
+ */
 static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR *pszFormat, ...)
 {
 	va_list VArgs;
@@ -353,7 +386,15 @@ static IMG_BOOL BAppend(IMG_CHAR *pszBuf, IMG_UINT32 ui32BufSiz, const IMG_CHAR 
 	return bTrunc;
 }
 
- 
+/*************************************************************************/ /*!
+@Function       PVRSRVDebugPrintf
+@Description    To output a debug message to the user
+@Input          uDebugLevel The current debug level
+@Input          pszFile     The source file generating the message
+@Input          uLine       The line of the source file
+@Input          pszFormat   The message format string
+@Input          ...         Zero or more arguments for use by the format string
+*/ /**************************************************************************/
 void PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 			   const IMG_CHAR *pszFullFileName,
 			   IMG_UINT32 ui32Line,
@@ -439,7 +480,7 @@ void PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 			{
 				pszFileName = pszLeafName+1;
 			}
-#endif 
+#endif /* __sh__ */
 
 			if (BAppend(pszBuf, ui32BufSiz, " [%u, %s]", ui32Line, pszFileName))
 			{
@@ -464,10 +505,12 @@ void PVRSRVDebugPrintf(IMG_UINT32 ui32DebugLevel,
 	}
 }
 
-#endif 
+#endif /* PVRSRV_NEED_PVR_DPF */
 
 
- 
+/*************************************************************************/ /*!
+ Version DebugFS entry
+*/ /**************************************************************************/
 
 static void *_DebugVersionCompare_AnyVaCb(PVRSRV_DEVICE_NODE *psDevNode,
 					  va_list va)
@@ -564,7 +607,9 @@ static struct seq_operations gsDebugVersionReadOps =
 };
 
 
- 
+/*************************************************************************/ /*!
+ Nodes DebugFS entry
+*/ /**************************************************************************/
 
 static const IMG_CHAR *_DebugNodesDevTypeToString(PVRSRV_DEVICE_TYPE eDeviceType)
 {
@@ -692,7 +737,9 @@ static struct seq_operations gsDebugNodesReadOps =
 };
 
 
- 
+/*************************************************************************/ /*!
+ Status DebugFS entry
+*/ /**************************************************************************/
 
 static void *_DebugStatusCompare_AnyVaCb(PVRSRV_DEVICE_NODE *psDevNode,
 					 va_list va)
@@ -772,13 +819,13 @@ static int _DebugStatusSeqShow(struct seq_file *psSeqFile, void *pvData)
 	{
 		PVRSRV_DEVICE_NODE *psDeviceNode = (PVRSRV_DEVICE_NODE *)pvData;
 		
-		
+		/* Update the health status now if possible... */
 		if (psDeviceNode->pfnUpdateHealthStatus)
 		{
 			psDeviceNode->pfnUpdateHealthStatus(psDeviceNode, IMG_FALSE);
 		}
 
-		
+		/* Write the device status to the sequence file... */
 		if (psDeviceNode->sDevId.eDeviceType == PVRSRV_DEVICE_TYPE_RGX)
 		{
 			switch (psDeviceNode->eHealthStatus)
@@ -797,13 +844,13 @@ static int _DebugStatusSeqShow(struct seq_file *psSeqFile, void *pvData)
 					break;
 			}
 
-			
+			/* Write other useful stats to aid the test cycle... */
 			if (psDeviceNode->pvDevice != NULL)
 			{
 				PVRSRV_RGXDEV_INFO *psDevInfo = psDeviceNode->pvDevice;
 				RGXFWIF_TRACEBUF *psRGXFWIfTraceBufCtl = psDevInfo->psRGXFWIfTraceBuf;
 
-				
+				/* Calculate the number of HWR events in total across all the DMs... */
 				if (psRGXFWIfTraceBufCtl != NULL)
 				{
 					IMG_UINT32 ui32HWREventCount = 0;
@@ -820,7 +867,7 @@ static int _DebugStatusSeqShow(struct seq_file *psSeqFile, void *pvData)
 					seq_printf(psSeqFile, "CRR Event Count: %d\n", ui32CRREventCount);
 				}
 				
-				
+				/* Write the number of APM events... */
 				seq_printf(psSeqFile, "APM Event Count: %d\n", psDevInfo->ui32ActivePMReqTotal);
 			}
 		}
@@ -897,7 +944,9 @@ static struct seq_operations gsDebugStatusReadOps =
 	.show = _DebugStatusSeqShow,
 };
 
- 
+/*************************************************************************/ /*!
+ Dump Debug DebugFS entry
+*/ /**************************************************************************/
 
 static void *_DebugDumpDebugCompare_AnyVaCb(PVRSRV_DEVICE_NODE *psDevNode, va_list va)
 {
@@ -990,7 +1039,9 @@ static struct seq_operations gsDumpDebugReadOps =
 	.next  = _DebugDumpDebugSeqNext,
 	.show  = _DebugDumpDebugSeqShow,
 };
- 
+/*************************************************************************/ /*!
+ Firmware Trace DebugFS entry
+*/ /**************************************************************************/
 
 #if defined(PVRSRV_ENABLE_FW_TRACE_DEBUGFS)
 static void *_DebugFWTraceCompare_AnyVaCb(PVRSRV_DEVICE_NODE *psDevNode, va_list va)
@@ -1088,7 +1139,9 @@ static struct seq_operations gsFWTraceReadOps =
 #endif
 
 
- 
+/*************************************************************************/ /*!
+ Debug level DebugFS entry
+*/ /**************************************************************************/
 
 #if defined(DEBUG)
 static void *DebugLevelSeqStart(struct seq_file *psSeqFile, loff_t *puiPosition)
@@ -1174,12 +1227,12 @@ static IMG_INT DebugLevelSet(const char __user *pcBuffer,
 		return -EINVAL;
 	}
 
-	
+	/* As this is Linux the next line uses a GCC builtin function */
 	(*uiDebugLevel) &= (1 << __builtin_ffsl(DBGPRIV_LAST)) - 1;
 
 	return uiCount;
 }
-#endif 
+#endif /* defined(DEBUG) */
 
 static void *gpvVersionDebugFSEntry;
 static void *gpvNodesDebugFSEntry;
