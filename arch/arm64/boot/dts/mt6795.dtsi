@@ -950,7 +950,7 @@
 			reg = <0x13000000 0xFFFF>;
 			interrupts = <0 225 0x8>;
 			interrupt-names = "RGX";
-			clock-frequency = <676000000>;
+			clock-frequency = <689000000>;
 		};
 
 		MMSYS_CONFIG@0x14000000 {
