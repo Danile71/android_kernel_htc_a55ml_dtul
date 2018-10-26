@@ -1,11 +1,13 @@
-toolchain="/home/danil_e71/aarch64-linux-android-4.9/bin/aarch64-linux-android-"
+toolchain="/home/danil_e71/toolchain/bin/aarch64-linux-android-"
 output_path="./output"
 
-export CROSS_COMPILE=$toolchain
+export CROSS_COMPILE="/home/danil_e71/toolchain/bin/aarch64-linux-android-"
 
 export ARCH=arm64
 export TARGET_ARCH=arm64
 export ARCH_MTK_PLATFORM=mt6795
+export TARGET_BUILD_VARIANT=user
+export MTK_TARGET_PROJECT=a55ml
 
 build_kernel()
 { 
@@ -22,6 +24,7 @@ build_kernel()
 	make ${makeflags} a55ml_dtul_defconfig
 
 	make ${makeflags} -j8 Image.gz-dtb
+	#make ${makeflags} -j8 modules
 }
 
 build_kernel
