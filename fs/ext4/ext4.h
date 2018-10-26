@@ -26,6 +26,7 @@
 #include <linux/seqlock.h>
 #include <linux/mutex.h>
 #include <linux/timer.h>
+#include <linux/version.h>
 #include <linux/wait.h>
 #include <linux/blockgroup_lock.h>
 #include <linux/percpu_counter.h>
@@ -245,6 +246,7 @@ struct ext4_io_submit {
 #define	EXT4_MAX_BLOCK_SIZE		65536
 #define EXT4_MIN_BLOCK_LOG_SIZE		10
 #define EXT4_MAX_BLOCK_LOG_SIZE		16
+#define EXT4_MAX_CLUSTER_LOG_SIZE	30
 #ifdef __KERNEL__
 # define EXT4_BLOCK_SIZE(s)		((s)->s_blocksize)
 #else
@@ -589,6 +591,7 @@ enum {
 #define EXT4_FREE_BLOCKS_NO_QUOT_UPDATE	0x0008
 #define EXT4_FREE_BLOCKS_NOFREE_FIRST_CLUSTER	0x0010
 #define EXT4_FREE_BLOCKS_NOFREE_LAST_CLUSTER	0x0020
+#define EXT4_FREE_BLOCKS_RESERVE		0x0040
 
 /*
  * Flags used by ext4_discard_partial_page_buffers
@@ -727,19 +730,55 @@ struct move_extent {
 	<= (EXT4_GOOD_OLD_INODE_SIZE +			\
 	    (einode)->i_extra_isize))			\
 
+/*
+ * We use an encoding that preserves the times for extra epoch "00":
+ *
+ * extra  msb of                         adjust for signed
+ * epoch  32-bit                         32-bit tv_sec to
+ * bits   time    decoded 64-bit tv_sec  64-bit tv_sec      valid time range
+ * 0 0    1    -0x80000000..-0x00000001  0x000000000 1901-12-13..1969-12-31
+ * 0 0    0    0x000000000..0x07fffffff  0x000000000 1970-01-01..2038-01-19
+ * 0 1    1    0x080000000..0x0ffffffff  0x100000000 2038-01-19..2106-02-07
+ * 0 1    0    0x100000000..0x17fffffff  0x100000000 2106-02-07..2174-02-25
+ * 1 0    1    0x180000000..0x1ffffffff  0x200000000 2174-02-25..2242-03-16
+ * 1 0    0    0x200000000..0x27fffffff  0x200000000 2242-03-16..2310-04-04
+ * 1 1    1    0x280000000..0x2ffffffff  0x300000000 2310-04-04..2378-04-22
+ * 1 1    0    0x300000000..0x37fffffff  0x300000000 2378-04-22..2446-05-10
+ *
+ * Note that previous versions of the kernel on 64-bit systems would
+ * incorrectly use extra epoch bits 1,1 for dates between 1901 and
+ * 1970.  e2fsck will correct this, assuming that it is run on the
+ * affected filesystem before 2242.
+ */
+
 static inline __le32 ext4_encode_extra_time(struct timespec *time)
 {
-       return cpu_to_le32((sizeof(time->tv_sec) > 4 ?
-			   (time->tv_sec >> 32) & EXT4_EPOCH_MASK : 0) |
-                          ((time->tv_nsec << EXT4_EPOCH_BITS) & EXT4_NSEC_MASK));
+	u32 extra = sizeof(time->tv_sec) > 4 ?
+		((time->tv_sec - (s32)time->tv_sec) >> 32) & EXT4_EPOCH_MASK : 0;
+	return cpu_to_le32(extra | (time->tv_nsec << EXT4_EPOCH_BITS));
 }
 
 static inline void ext4_decode_extra_time(struct timespec *time, __le32 extra)
 {
-       if (sizeof(time->tv_sec) > 4)
-	       time->tv_sec |= (__u64)(le32_to_cpu(extra) & EXT4_EPOCH_MASK)
-			       << 32;
-       time->tv_nsec = (le32_to_cpu(extra) & EXT4_NSEC_MASK) >> EXT4_EPOCH_BITS;
+	if (unlikely(sizeof(time->tv_sec) > 4 &&
+			(extra & cpu_to_le32(EXT4_EPOCH_MASK)))) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,20,0)
+		/* Handle legacy encoding of pre-1970 dates with epoch
+		 * bits 1,1.  We assume that by kernel version 4.20,
+		 * everyone will have run fsck over the affected
+		 * filesystems to correct the problem.  (This
+		 * backwards compatibility may be removed before this
+		 * time, at the discretion of the ext4 developers.)
+		 */
+		u64 extra_bits = le32_to_cpu(extra) & EXT4_EPOCH_MASK;
+		if (extra_bits == 3 && ((time->tv_sec) & 0x80000000) != 0)
+			extra_bits = 0;
+		time->tv_sec += extra_bits << 32;
+#else
+		time->tv_sec += (u64)(le32_to_cpu(extra) & EXT4_EPOCH_MASK) << 32;
+#endif
+	}
+	time->tv_nsec = (le32_to_cpu(extra) & EXT4_NSEC_MASK) >> EXT4_EPOCH_BITS;
 }
 
 #define EXT4_INODE_SET_XTIME(xtime, inode, raw_inode)			       \
@@ -811,6 +850,29 @@ do {									       \
 #endif /* defined(__KERNEL__) || defined(__linux__) */
 
 #include "extents_status.h"
+
+/*
+ * Lock subclasses for i_data_sem in the ext4_inode_info structure.
+ *
+ * These are needed to avoid lockdep false positives when we need to
+ * allocate blocks to the quota inode during ext4_map_blocks(), while
+ * holding i_data_sem for a normal (non-quota) inode.  Since we don't
+ * do quota tracking for the quota inode, this avoids deadlock (as
+ * well as infinite recursion, since it isn't turtles all the way
+ * down...)
+ *
+ *  I_DATA_SEM_NORMAL - Used for most inodes
+ *  I_DATA_SEM_OTHER  - Used by move_inode.c for the second normal inode
+ *			  where the second inode has larger inode number
+ *			  than the first
+ *  I_DATA_SEM_QUOTA  - Used for quota inodes only
+ */
+enum {
+	I_DATA_SEM_NORMAL = 0,
+	I_DATA_SEM_OTHER,
+	I_DATA_SEM_QUOTA,
+};
+
 
 /*
  * fourth extended file system inode data in memory
@@ -970,6 +1032,7 @@ struct ext4_inode_info {
 #define EXT4_MOUNT_POSIX_ACL		0x08000	/* POSIX Access Control Lists */
 #define EXT4_MOUNT_NO_AUTO_DA_ALLOC	0x10000	/* No auto delalloc mapping */
 #define EXT4_MOUNT_BARRIER		0x20000 /* Use block barriers */
+#define EXT4_MOUNT_DEBUG_BDINFO		0x40000 /* Debug backing device info. */
 #define EXT4_MOUNT_QUOTA		0x80000 /* Some quota option set */
 #define EXT4_MOUNT_USRQUOTA		0x100000 /* "old" user quota */
 #define EXT4_MOUNT_GRPQUOTA		0x200000 /* "old" group quota */
@@ -1148,7 +1211,9 @@ struct ext4_super_block {
 	__le32	s_usr_quota_inum;	/* inode for tracking user quota */
 	__le32	s_grp_quota_inum;	/* inode for tracking group quota */
 	__le32	s_overhead_clusters;	/* overhead blocks/clusters in fs */
-	__le32	s_reserved[108];	/* Padding to the end of the block */
+	__le32	s_reserved[103];	/* Padding to the end of the block */
+	__le32	s_bd_reset_cnt;
+	__u8	s_bd_reset_time[16];
 	__le32	s_checksum;		/* crc32c(superblock) */
 };
 
@@ -1188,6 +1253,7 @@ struct ext4_sb_info {
 	unsigned int s_mount_flags;
 	unsigned int s_def_mount_opt;
 	ext4_fsblk_t s_sb_block;
+	atomic64_t s_r_blocks_count;
 	atomic64_t s_resv_clusters;
 	kuid_t s_resuid;
 	kgid_t s_resgid;
@@ -1321,6 +1387,10 @@ struct ext4_sb_info {
 	struct list_head s_es_lru;
 	struct percpu_counter s_extent_cache_cnt;
 	spinlock_t s_es_lru_lock ____cacheline_aligned_in_smp;
+
+	/* Debugging info. for backing device reset */
+	__u32 s_bd_reset_cnt;
+	__u8 s_bd_reset_time[16];
 };
 
 static inline struct ext4_sb_info *EXT4_SB(struct super_block *sb)
@@ -2151,7 +2221,12 @@ extern int search_dir(struct buffer_head *bh,
 		      struct inode *dir,
 		      const struct qstr *d_name,
 		      unsigned int offset,
+#ifdef CONFIG_SDCARD_FS_CI_SEARCH
+		      struct ext4_dir_entry_2 **res_dir,
+		      char *ci_name_buf);
+#else
 		      struct ext4_dir_entry_2 **res_dir);
+#endif
 extern int ext4_generic_delete_entry(handle_t *handle,
 				     struct inode *dir,
 				     struct ext4_dir_entry_2 *de_del,
@@ -2258,6 +2333,15 @@ extern void ext4_group_desc_csum_set(struct super_block *sb, __u32 group,
 				     struct ext4_group_desc *gdp);
 extern int ext4_register_li_request(struct super_block *sb,
 				    ext4_group_t first_not_zeroed);
+/* for debugging, sangwoo2.lee */
+extern void print_iloc_info(struct super_block *sb,
+				struct ext4_iloc iloc);
+extern void print_bh(struct super_block *sb,
+                  struct buffer_head *bh, int start, int len);
+extern void print_block_data(struct super_block *sb, sector_t blocknr,
+                  unsigned char *data_to_dump, int start, int len);
+extern void print_debug_bdinfo(struct super_block *sb);
+/* for debugging */
 
 static inline int ext4_has_group_desc_csum(struct super_block *sb)
 {
