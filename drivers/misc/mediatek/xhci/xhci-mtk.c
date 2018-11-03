@@ -400,7 +400,7 @@ static ssize_t adc_status_show(struct device *dev,
 	printk("[Cable][%s] ADC = %d\n", __func__, adc);
 	return sprintf(buf, "%d\n", adc);
 }
-static DEVICE_ATTR(adc, S_IRUGO | S_IWUSR, adc_status_show, NULL);
+static DEVICE_ATTR(adc, S_IRUGO, adc_status_show, NULL);
 
 u32 ints[2] = {0,0};
 static ssize_t USB_ID_status_show(struct device *dev,

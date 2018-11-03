@@ -5584,7 +5584,7 @@ static ssize_t p_status_show(struct device *dev,
 	return sprintf(buf, "%d\n", p_status);
 }
 
-static DEVICE_ATTR(p_status, 0444, p_status_show, NULL);
+static DEVICE_ATTR(p_status, S_IRUSR, p_status_show, NULL);
 
 static ssize_t ps_adc_show(struct device *dev,
                struct device_attribute *attr, char *buf)
@@ -5606,7 +5606,7 @@ static ssize_t ps_adc_show(struct device *dev,
                             ps_adc, ps_enable, CW_MCU_INT_BIT_PROXIMITY,
                             ps_pocket_mode);
 }
-static DEVICE_ATTR(ps_adc, 0444, ps_adc_show, NULL);
+static DEVICE_ATTR(ps_adc, S_IRUSR, ps_adc_show, NULL);
 
 static ssize_t set_gesture_motion(struct device *dev,
 				  struct device_attribute *attr,
@@ -5779,50 +5779,50 @@ static ssize_t log_level_store(struct device *dev, struct device_attribute *attr
 
 static struct device_attribute attributes[] = {
 
-	__ATTR(enable, 0666, active_show,
+	__ATTR(enable, S_IRUGO | S_IWUSR, active_show,
 			active_set),
-	__ATTR(batch_enable, 0666, batch_show, batch_set),
-	__ATTR(delay_ms, 0666, interval_show,
+	__ATTR(batch_enable, S_IRUGO | S_IWUSR, batch_show, batch_set),
+	__ATTR(delay_ms, S_IRUGO | S_IWUSR, interval_show,
 			interval_set),
-	__ATTR(flush, 0666, flush_show, flush_set),
-	__ATTR(calibrator_en, 0220, NULL, set_calibrator_en),
-	__ATTR(calibrator_status_acc, 0440, show_calibrator_status_acc, NULL),
-	__ATTR(calibrator_status_mag, 0440, show_calibrator_status_mag, NULL),
-	__ATTR(calibrator_status_gyro, 0440, show_calibrator_status_gyro, NULL),
-	__ATTR(calibrator_data_acc, 0666, get_k_value_acc_f, set_k_value_acc_f),
-	__ATTR(calibrator_data_acc_rl, 0440, get_k_value_acc_rl_f, NULL),
-	__ATTR(ap_calibrator_data_acc_rl, 0440, ap_get_k_value_acc_rl_f, NULL),
-	__ATTR(calibrator_data_mag, 0666, get_k_value_mag_f, set_k_value_mag_f),
-	__ATTR(calibrator_data_gyro, 0666, get_k_value_gyro_f,
+	__ATTR(flush, S_IRUGO | S_IWUSR, flush_show, flush_set),
+	__ATTR(calibrator_en, S_IWUSR, NULL, set_calibrator_en),
+	__ATTR(calibrator_status_acc, S_IRUGO, show_calibrator_status_acc, NULL),
+	__ATTR(calibrator_status_mag, S_IRUGO, show_calibrator_status_mag, NULL),
+	__ATTR(calibrator_status_gyro, S_IRUGO, show_calibrator_status_gyro, NULL),
+	__ATTR(calibrator_data_acc, S_IRUGO | S_IWUSR, get_k_value_acc_f, set_k_value_acc_f),
+	__ATTR(calibrator_data_acc_rl, S_IRUGO, get_k_value_acc_rl_f, NULL),
+	__ATTR(ap_calibrator_data_acc_rl, S_IRUGO, ap_get_k_value_acc_rl_f, NULL),
+	__ATTR(calibrator_data_mag, S_IRUGO | S_IWUSR, get_k_value_mag_f, set_k_value_mag_f),
+	__ATTR(calibrator_data_gyro, S_IRUGO | S_IWUSR, get_k_value_gyro_f,
 			set_k_value_gyro_f),
-	__ATTR(calibrator_data_light, 0666, get_k_value_light_f, set_k_value_light_f),
-        __ATTR(calibrator_data_proximity, 0666, get_k_value_proximity_f, set_k_value_proximity_f),
-	__ATTR(calibrator_data_barometer, 0666, get_k_value_barometer_f,
+	__ATTR(calibrator_data_light, S_IRUGO | S_IWUSR, get_k_value_light_f, set_k_value_light_f),
+        __ATTR(calibrator_data_proximity, S_IRUGO | S_IWUSR, get_k_value_proximity_f, set_k_value_proximity_f),
+	__ATTR(calibrator_data_barometer, S_IRUGO | S_IWUSR, get_k_value_barometer_f,
 			set_k_value_barometer_f),
-	__ATTR(gesture_motion, 0660, get_gesture_motion, set_gesture_motion),
-	__ATTR(data_barometer, 0440, get_barometer, NULL),
-        __ATTR(data_proximity, 0444, get_proximity, NULL),
-        __ATTR(data_proximity_polling, 0444, get_proximity_polling, NULL),
-	__ATTR(data_light_polling, 0440, get_light_polling, NULL),
-	__ATTR(ls_mechanism, 0664, get_ls_mechanism, NULL),
-	__ATTR(sensor_hub_rdata, 0220, NULL, read_mcu_data),
-        __ATTR(ps_canc, 0666, get_ps_canc, set_ps_canc),
-	__ATTR(data_light_kadc, 0440, get_light_kadc, NULL),
-	__ATTR(firmware_version, 0440, get_firmware_version, NULL),
-	__ATTR(firmware_info, 0440, get_firmware_info, NULL),
-	__ATTR(led_en, 0220, NULL, led_enable),
-	__ATTR(trigger_crash, 0220, NULL, trigger_mcu_crash),
-	__ATTR(mcu_wakeup, 0220, NULL, trigger_mcu_wakeup),
-	__ATTR(nvram_cali_data, 0666, get_nvram_cali_data, set_nvram_cali_data),
+	__ATTR(gesture_motion, S_IRUGO | S_IWUSR, get_gesture_motion, set_gesture_motion),
+	__ATTR(data_barometer, S_IRUGO, get_barometer, NULL),
+        __ATTR(data_proximity, S_IRUGO, get_proximity, NULL),
+        __ATTR(data_proximity_polling, S_IRUGO, get_proximity_polling, NULL),
+	__ATTR(data_light_polling, S_IRUGO, get_light_polling, NULL),
+	__ATTR(ls_mechanism, S_IRUGO, get_ls_mechanism, NULL),
+	__ATTR(sensor_hub_rdata, S_IWUSR, NULL, read_mcu_data),
+        __ATTR(ps_canc, S_IRUGO | S_IWUSR, get_ps_canc, set_ps_canc),
+	__ATTR(data_light_kadc, S_IRUGO, get_light_kadc, NULL),
+	__ATTR(firmware_version, S_IRUGO, get_firmware_version, NULL),
+	__ATTR(firmware_info, S_IRUGO, get_firmware_info, NULL),
+	__ATTR(led_en, S_IWUSR, NULL, led_enable),
+	__ATTR(trigger_crash, S_IWUSR, NULL, trigger_mcu_crash),
+	__ATTR(mcu_wakeup, S_IWUSR, NULL, trigger_mcu_wakeup),
+	__ATTR(nvram_cali_data, S_IRUGO | S_IWUSR, get_nvram_cali_data, set_nvram_cali_data),
 #ifdef SHUB_LOGGING_SUPPORT
-	__ATTR(mcu_log_mask, 0660, log_mask_show, log_mask_store),
-	__ATTR(mcu_log_level, 0660, log_level_show, log_level_store),
+	__ATTR(mcu_log_mask, S_IRUGO | S_IWUSR, log_mask_show, log_mask_store),
+	__ATTR(mcu_log_level, S_IRUGO | S_IWUSR, log_level_show, log_level_store),
 #endif 
-	__ATTR(dbg_flag, 0440, dbg_flag_show, NULL),
-	__ATTR(sensor_placement, 0660, NULL, sensor_placement_store),
-	__ATTR(vibrate_ms, 0220, NULL, set_vibrate_ms),
-	__ATTR(crash_count, 0440, crash_count_show, NULL),
-	__ATTR(rv_cali, 0666, rv_cali_show, rv_cali_set),
+	__ATTR(dbg_flag, S_IRUGO, dbg_flag_show, NULL),
+	__ATTR(sensor_placement, S_IWUSR, NULL, sensor_placement_store),
+	__ATTR(vibrate_ms, S_IWUSR, NULL, set_vibrate_ms),
+	__ATTR(crash_count, S_IRUGO, crash_count_show, NULL),
+	__ATTR(rv_cali, S_IRUGO | S_IWUSR, rv_cali_show, rv_cali_set),
 };
 
 
@@ -6799,7 +6799,7 @@ static ssize_t fw_update_timeout_show(struct device *dev,
 }
 
 static DEVICE_ATTR(fw_update_status, S_IRUSR | S_IWUSR, fw_update_status_show, fw_update_status_store);
-static DEVICE_ATTR(fw_update_timeout, S_IRUSR | S_IWUSR, fw_update_timeout_show, NULL);
+static DEVICE_ATTR(fw_update_timeout, S_IRUSR, fw_update_timeout_show, NULL);
 static DEVICE_ATTR(fw_update_progress, S_IRUSR | S_IWUSR, fw_update_progress_show, fw_update_progress_store);
 
 static int shub_fw_flash_open(struct inode *inode, struct file *file)

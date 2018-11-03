@@ -2100,7 +2100,7 @@ static ssize_t projector_width_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", config->server_info.width);
 }
 
-static DEVICE_ATTR(width, S_IRUGO | S_IWUSR, projector_width_show,
+static DEVICE_ATTR(width, S_IRUGO, projector_width_show,
 						    NULL);
 
 static ssize_t projector_height_show(struct device *dev,
@@ -2111,7 +2111,7 @@ static ssize_t projector_height_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", config->server_info.height);
 }
 
-static DEVICE_ATTR(height, S_IRUGO | S_IWUSR, projector_height_show,
+static DEVICE_ATTR(height, S_IRUGO, projector_height_show,
 						    NULL);
 
 static ssize_t projector_rotation_show(struct device *dev,
@@ -2122,7 +2122,7 @@ static ssize_t projector_rotation_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", (config->client_info.display_conf & CLIENT_INFO_SERVER_ROTATE_USED));
 }
 
-static DEVICE_ATTR(rotation, S_IRUGO | S_IWUSR, projector_rotation_show,
+static DEVICE_ATTR(rotation, S_IRUGO, projector_rotation_show,
 						    NULL);
 
 static ssize_t projector_version_show(struct device *dev,
@@ -2133,7 +2133,7 @@ static ssize_t projector_version_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", config->version);
 }
 
-static DEVICE_ATTR(version, S_IRUGO | S_IWUSR, projector_version_show,
+static DEVICE_ATTR(version, S_IRUGO, projector_version_show,
 						    NULL);
 
 static ssize_t projector_vendor_show(struct device *dev,
@@ -2144,7 +2144,7 @@ static ssize_t projector_vendor_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", config->vendor);
 }
 
-static DEVICE_ATTR(vendor, S_IRUGO | S_IWUSR, projector_vendor_show,
+static DEVICE_ATTR(vendor, S_IRUGO, projector_vendor_show,
 						    NULL);
 
 static ssize_t projector_server_nonce_show(struct device *dev,
@@ -2156,7 +2156,7 @@ static ssize_t projector_server_nonce_show(struct device *dev,
 	return HSML_SERVER_NONCE_SIZE;
 }
 
-static DEVICE_ATTR(server_nonce, S_IRUGO | S_IWUSR, projector_server_nonce_show,
+static DEVICE_ATTR(server_nonce, S_IRUGO, projector_server_nonce_show,
 						    NULL);
 
 static ssize_t projector_client_sig_show(struct device *dev,
@@ -2168,7 +2168,7 @@ static ssize_t projector_client_sig_show(struct device *dev,
 	return HSML_CLIENT_SIG_SIZE;
 }
 
-static DEVICE_ATTR(client_sig, S_IRUGO | S_IWUSR, projector_client_sig_show,
+static DEVICE_ATTR(client_sig, S_IRUGO, projector_client_sig_show,
 						    NULL);
 
 static ssize_t projector_server_sig_store(
@@ -2314,11 +2314,11 @@ u8 aucWidth[cHSML_WIDTH_SIZE];
 }
 #endif
 
-static DEVICE_ATTR(client_width, S_IRUGO | S_IWUSR, projector2_width_show,
+static DEVICE_ATTR(client_width, 
 #if !HSML_VERSION_12
-                            NULL
+                            S_IRUGO, projector2_width_show,NULL
 #else
-                            projector2_width_store
+                            S_IRUGO | S_IWUSR, projector2_width_show,projector2_width_store
 #endif
         );
 
@@ -2353,11 +2353,11 @@ u8 aucWidth[cHSML_WIDTH_SIZE];
 }
 #endif
 
-static DEVICE_ATTR(client_height, S_IRUGO | S_IWUSR, projector2_height_show,
+static DEVICE_ATTR(client_height, 
 #if !HSML_VERSION_12
-                            NULL
+                            S_IRUGO, projector2_height_show,NULL
 #else
-                            projector2_height_store
+                           S_IRUGO | S_IWUSR, projector2_height_show,projector2_height_store 
 #endif
                             );
 
@@ -2369,7 +2369,7 @@ static ssize_t projector2_maxfps_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", config->MaxFPS);
 }
 
-static DEVICE_ATTR(client_maxfps, S_IRUGO | S_IWUSR, projector2_maxfps_show,
+static DEVICE_ATTR(client_maxfps, S_IRUGO, projector2_maxfps_show,
 						    NULL);
 
 static ssize_t projector2_pixel_format_show(struct device *dev,
@@ -2380,14 +2380,14 @@ static ssize_t projector2_pixel_format_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", config->set_display_info.bPixelFormat);
 }
 
-static DEVICE_ATTR(client_pixel_format, S_IRUGO | S_IWUSR, projector2_pixel_format_show,
+static DEVICE_ATTR(client_pixel_format, S_IRUGO, projector2_pixel_format_show,
 						    NULL);
 
-static DEVICE_ATTR(client_context_info, S_IRUGO | S_IWUSR, NULL, context_info_store);
+static DEVICE_ATTR(client_context_info, S_IWUSR, NULL, context_info_store);
 #if HSML_VERSION_12
-static DEVICE_ATTR(client_ver, S_IRUGO | S_IWUSR, projector2_ver_show, NULL);
-static DEVICE_ATTR(client_cap, S_IRUGO | S_IWUSR, projector2_cap_show, NULL);
-static DEVICE_ATTR(client_uuid, S_IRUGO | S_IWUSR, NULL, projector2_uuid_store);
+static DEVICE_ATTR(client_ver, S_IRUGO , projector2_ver_show, NULL);
+static DEVICE_ATTR(client_cap, S_IRUGO , projector2_cap_show, NULL);
+static DEVICE_ATTR(client_uuid, S_IWUSR, NULL, projector2_uuid_store);
 #endif
 
 static struct device_attribute *projector2_function_attributes[] = {
