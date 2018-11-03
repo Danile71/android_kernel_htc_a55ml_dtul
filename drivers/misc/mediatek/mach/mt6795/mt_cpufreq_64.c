@@ -1748,7 +1748,7 @@ static int set_cur_volt_extbuck(struct mt_cpu_dvfs *p, unsigned int mv)
 				ret = -1;
 			}
 
-			udelay(PMIC_SETTLE_TIME(cur_vproc_mv - MAX_DIFF_VSRAM_VPROC, cur_vproc_mv)); 
+			mdelay(PMIC_SETTLE_TIME(cur_vproc_mv - MAX_DIFF_VSRAM_VPROC, cur_vproc_mv)); 
 
 			
 		} while (target_vsram_mv > cur_vsram_mv);
@@ -1791,7 +1791,7 @@ static int set_cur_volt_extbuck(struct mt_cpu_dvfs *p, unsigned int mv)
 			mt_cpufreq_set_pmic_cmd(PMIC_WRAP_PHASE_NORMAL, IDX_NM_VSRAM_CA7, VOLT_TO_PMIC_VAL(cur_vsram_mv));
 			mt_cpufreq_apply_pmic_cmd(IDX_NM_VSRAM_CA7);
 
-			udelay(PMIC_SETTLE_TIME(cur_vproc_mv + MAX_DIFF_VSRAM_VPROC, cur_vproc_mv)); 
+			mdelay(PMIC_SETTLE_TIME(cur_vproc_mv + MAX_DIFF_VSRAM_VPROC, cur_vproc_mv)); 
 
 			
 		} while (cur_vproc_mv > mv);
