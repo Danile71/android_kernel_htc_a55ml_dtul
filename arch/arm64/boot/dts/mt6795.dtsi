@@ -18,6 +18,23 @@
 		bootargs = "console=tty0 console=ttyMT0,921600n1 root=/dev/ram initrd=0x44000000,0x300000 loglevel=8";
 	};
 
+	firmware: firmware {
+                 android {
+                         compatible = "android,firmware";
+                         fstab {
+                                 compatible = "android,fstab";
+                                 system {
+                                         compatible = "android,system";
+                                         dev = "/dev/block/platform/mtk-msdc.0/by-name/system";
+                                         type = "ext4";
+                                         mnt_flags = "ro,barrier=1,discard";
+                                         fsmgr_flags = "wait";
+                                         status = "ok";
+                                 };
+                         };
+                 };
+        };
+
 	    /* Do not put any bus before mtk-msdc, because it should be mtk-msdc.0 for partition device node usage */
 	    mtk-msdc {
 			compatible = "simple-bus";
