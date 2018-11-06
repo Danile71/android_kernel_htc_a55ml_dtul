@@ -59,4 +59,5 @@ obj-$(CONFIG_MEDIATEK_SOLUTION) += mediatek/
 obj-y				+= htc/
 obj-$(CONFIG_FPR_CT)		+= fpr_CrucialTec/
 obj-$(CONFIG_FPR_SYN)		+= fpr_Synaptics/
+obj-$(CONFIG_UID_CPUTIME)	+= uid_cputime.o
 

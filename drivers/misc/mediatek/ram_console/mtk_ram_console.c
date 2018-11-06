@@ -757,14 +757,13 @@ static int __init ram_console_late_init(void)
 #ifdef CONFIG_MTK_EMMC_SUPPORT
 #ifdef CONFIG_MTK_AEE_IPANIC
 #ifdef CONFIG_MTK_GPT_SCHEME_SUPPORT
-	
-	
-	
-	
-	
-	
-	
-	
+	int err;
+	static struct task_struct *thread;
+	thread = kthread_run(emmc_read_last_kmsg, 0, "read_poweroff_log");
+	if (IS_ERR(thread)) {
+		err = PTR_ERR(thread);
+		pr_err("ram_console: failed to create kernel thread: %d\n", err);
+	}
 #else
 	emmc_read_last_kmsg(NULL);
 #endif

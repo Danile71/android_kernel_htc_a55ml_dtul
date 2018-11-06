@@ -25,7 +25,7 @@
                                  compatible = "android,fstab";
                                  system {
                                          compatible = "android,system";
-                                         dev = "/dev/block/platform/mtk-msdc.0/by-name/system";
+                                         dev = "/dev/block/bootdevice/by-name/system";
                                          type = "ext4";
                                          mnt_flags = "ro,barrier=1,discard";
                                          fsmgr_flags = "wait";
