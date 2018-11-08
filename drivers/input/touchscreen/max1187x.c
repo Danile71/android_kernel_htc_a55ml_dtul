@@ -4597,7 +4597,7 @@ static int probe(struct i2c_client *client, const struct i2c_device_id *id)
 		|| (strcmp(htc_get_bootmode(), "recovery") == 0)) {
 		pr_info("(PROBE): %s mode", htc_get_bootmode());
 		off_mode_suspend(client);
-		goto err_off_mode;
+		//goto err_off_mode;
 	}
 
 	if(support_htc_event_flag == 1) {

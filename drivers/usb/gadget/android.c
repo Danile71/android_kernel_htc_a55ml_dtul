@@ -2699,7 +2699,7 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 	
 	if (spcf_flag == 1 && usb_sim_trigger == 0 ) {
 		printk(KERN_WARNING "[USB][%s] Block enable_store() since spcf_flag(%d) and usb_sim_trigger(%d)\n", __func__, spcf_flag, usb_sim_trigger);
-		return -EPERM;
+		//return -EPERM;
 	}
 
 	if (!cdev)
