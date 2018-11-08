@@ -390,5 +390,31 @@ static void __exit hwrng_exit(void)
 
 module_exit(hwrng_exit);
 
+static void devm_hwrng_release(struct device *dev, void *res)
+{
+	hwrng_unregister(*(struct hwrng **)res);
+}
+
+int devm_hwrng_register(struct device *dev, struct hwrng *rng)
+{
+	struct hwrng **ptr;
+	int error;
+
+	ptr = devres_alloc(devm_hwrng_release, sizeof(*ptr), GFP_KERNEL);
+	if (!ptr)
+		return -ENOMEM;
+
+	error = hwrng_register(rng);
+	if (error) {
+		devres_free(ptr);
+		return error;
+	}
+
+	*ptr = rng;
+	devres_add(dev, ptr);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(devm_hwrng_register);
+
 MODULE_DESCRIPTION("H/W Random Number Generator (RNG) driver");
 MODULE_LICENSE("GPL");

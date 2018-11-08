@@ -20,6 +20,19 @@ config HW_RANDOM
 
 	  If unsure, say Y.
 
+config HW_RANDOM_MTK
+	tristate "Mediatek Random Number Generator support"
+	depends on HW_RANDOM
+	default y
+	---help---
+	  This driver provides kernel-side support for the Random Number
+	  Generator hardware found on Mediatek SoCs.
+
+	  To compile this driver as a module, choose M here. the
+	  module will be called mtk-rng.
+
+	  If unsure, say Y.
+
 config HW_RANDOM_TIMERIOMEM
 	tristate "Timer IOMEM HW Random Number Generator support"
 	depends on HW_RANDOM && HAS_IOMEM
