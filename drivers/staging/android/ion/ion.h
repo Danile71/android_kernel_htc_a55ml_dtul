@@ -13,28 +13,21 @@
  * GNU General Public License for more details.
  *
  */
-
 #ifndef _LINUX_ION_H
 #define _LINUX_ION_H
-
 #include <linux/types.h>
-struct ion_handle_debug;
-
 #include "../uapi/ion.h"
-
 struct ion_handle;
 struct ion_device;
 struct ion_heap;
 struct ion_mapper;
 struct ion_client;
 struct ion_buffer;
-
 /* This should be removed some day when phys_addr_t's are fully
    plumbed in the kernel, and all instances of ion_phys_addr_t should
    be converted to phys_addr_t.  For the time being many kernel interfaces
    do not accept phys_addr_t's that would have to */
 #define ion_phys_addr_t unsigned long
-
 /**
  * struct ion_platform_heap - defines a heap in the given platform
  * @type:	type of the heap from ion_heap_type enum
@@ -58,7 +51,6 @@ struct ion_platform_heap {
 	ion_phys_addr_t align;
 	void *priv;
 };
-
 /**
  * struct ion_platform_data - array of platform heaps passed from board file
  * @nr:		number of structures in the array
@@ -70,27 +62,23 @@ struct ion_platform_data {
 	int nr;
 	struct ion_platform_heap *heaps;
 };
-
 /**
  * ion_reserve() - reserve memory for ion heaps if applicable
  * @data:	platform data specifying starting physical address and
  *		size
  *
  * Calls memblock reserve to set aside memory for heaps that are
- * located at specific memory addresses or of specfic sizes not
+ * located at specific memory addresses or of specific sizes not
  * managed by the kernel
  */
 void ion_reserve(struct ion_platform_data *data);
-
 /**
  * ion_client_create() -  allocate a client and returns it
  * @dev:		the global ion device
- * @heap_type_mask:	mask of heaps this client can allocate from
  * @name:		used for debugging
  */
 struct ion_client *ion_client_create(struct ion_device *dev,
 				     const char *name);
-
 /**
  * ion_client_destroy() -  free's a client and all it's handles
  * @client:	the client
@@ -99,7 +87,6 @@ struct ion_client *ion_client_create(struct ion_device *dev,
  * any handles it is holding.
  */
 void ion_client_destroy(struct ion_client *client);
-
 /**
  * ion_alloc - allocate ion memory
  * @client:		the client
@@ -119,7 +106,6 @@ void ion_client_destroy(struct ion_client *client);
 struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 			     size_t align, unsigned int heap_id_mask,
 			     unsigned int flags);
-
 /**
  * ion_free - free a handle
  * @client:	the client
@@ -128,7 +114,6 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
  * Free the provided handle.
  */
 void ion_free(struct ion_client *client, struct ion_handle *handle);
-
 /**
  * ion_phys - returns the physical address and len of a handle
  * @client:	the client
@@ -147,7 +132,6 @@ void ion_free(struct ion_client *client, struct ion_handle *handle);
  */
 int ion_phys(struct ion_client *client, struct ion_handle *handle,
 	     ion_phys_addr_t *addr, size_t *len);
-
 /**
  * ion_map_dma - return an sg_table describing a handle
  * @client:	the client
@@ -158,7 +142,6 @@ int ion_phys(struct ion_client *client, struct ion_handle *handle,
  */
 struct sg_table *ion_sg_table(struct ion_client *client,
 			      struct ion_handle *handle);
-
 /**
  * ion_map_kernel - create mapping for the given handle
  * @client:	the client
@@ -168,14 +151,12 @@ struct sg_table *ion_sg_table(struct ion_client *client,
  * can be used to access this address.
  */
 void *ion_map_kernel(struct ion_client *client, struct ion_handle *handle);
-
 /**
  * ion_unmap_kernel() - destroy a kernel mapping for a handle
  * @client:	the client
  * @handle:	handle to unmap
  */
 void ion_unmap_kernel(struct ion_client *client, struct ion_handle *handle);
-
 /**
  * ion_share_dma_buf() - share buffer as dma-buf
  * @client:	the client
@@ -183,14 +164,12 @@ void ion_unmap_kernel(struct ion_client *client, struct ion_handle *handle);
  */
 struct dma_buf *ion_share_dma_buf(struct ion_client *client,
 						struct ion_handle *handle);
-
 /**
  * ion_share_dma_buf_fd() - given an ion client, create a dma-buf fd
  * @client:	the client
  * @handle:	the handle
  */
 int ion_share_dma_buf_fd(struct ion_client *client, struct ion_handle *handle);
-
 /**
  * ion_import_dma_buf() - given an dma-buf fd from the ion exporter get handle
  * @client:	the client
@@ -201,5 +180,4 @@ int ion_share_dma_buf_fd(struct ion_client *client, struct ion_handle *handle);
  * another exporter is passed in this function will return ERR_PTR(-EINVAL)
  */
 struct ion_handle *ion_import_dma_buf(struct ion_client *client, int fd);
-
 #endif /* _LINUX_ION_H */
