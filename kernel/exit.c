@@ -53,6 +53,7 @@
 #include <linux/oom.h>
 #include <linux/writeback.h>
 #include <linux/shm.h>
+#include <linux/cpufreq.h>
 
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
@@ -152,6 +153,9 @@ void release_task(struct task_struct * p)
 {
 	struct task_struct *leader;
 	int zap_leader;
+#ifdef CONFIG_CPU_FREQ_STAT
+	cpufreq_task_stats_exit(p);
+#endif
 repeat:
 	rcu_read_lock();
 	atomic_dec(&__task_cred(p)->user->processes);

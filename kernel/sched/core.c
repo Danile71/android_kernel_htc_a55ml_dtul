@@ -37,6 +37,7 @@
 #include <linux/capability.h>
 #include <linux/completion.h>
 #include <linux/kernel_stat.h>
+#include <linux/cpufreq.h>
 #include <linux/debug_locks.h>
 #include <linux/perf_event.h>
 #include <linux/security.h>
@@ -1410,6 +1411,10 @@ static void __sched_fork(struct task_struct *p)
 #endif
 #ifdef CONFIG_SCHEDSTATS
 	memset(&p->se.statistics, 0, sizeof(p->se.statistics));
+#endif
+
+#ifdef CONFIG_CPU_FREQ_STAT
+	cpufreq_task_stats_init(p);
 #endif
 
 	INIT_LIST_HEAD(&p->rt.run_list);

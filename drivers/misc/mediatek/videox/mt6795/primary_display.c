@@ -11,8 +11,8 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/slab.h>
-#include <linux/ion_drv.h>
-#include <linux/mtk_ion.h>
+#include "mtk/ion_drv.h"
+#include "mtk/mtk_ion.h"
 
 #include "debug.h"
 

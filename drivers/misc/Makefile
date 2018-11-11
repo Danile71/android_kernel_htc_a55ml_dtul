@@ -60,4 +60,5 @@ obj-y				+= htc/
 obj-$(CONFIG_FPR_CT)		+= fpr_CrucialTec/
 obj-$(CONFIG_FPR_SYN)		+= fpr_Synaptics/
 obj-$(CONFIG_UID_CPUTIME)	+= uid_cputime.o
+obj-$(CONFIG_UID_SYS_STATS)     += uid_sys_stats.o
 

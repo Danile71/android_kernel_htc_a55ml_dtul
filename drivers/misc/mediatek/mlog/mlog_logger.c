@@ -32,7 +32,7 @@
 
 /* for collecting ion total memory usage*/
 #ifdef CONFIG_ION_MTK
-#include <linux/ion_drv.h>
+#include "mtk/ion_drv.h"
 #endif
 
 #include "mlog_internal.h"

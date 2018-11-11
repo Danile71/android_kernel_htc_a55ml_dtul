@@ -54,7 +54,7 @@ uint32_t in_lowmem = 0;
 #endif
 
 #ifdef CONFIG_ION_MTK
-#include <linux/ion_drv.h>
+#include "mtk/ion_drv.h"
 #endif
 
 extern void show_free_areas_minimum(void);
